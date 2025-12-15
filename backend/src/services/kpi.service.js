@@ -1,107 +1,99 @@
-const {
-  Invoice,
-  InvoiceItem,
-  Product,
-  Customer,
-  sequelize,
-} = require("../models");
-const { Op } = require("sequelize");
+const { Invoice, InvoiceItem, Product, Customer, sequelize } = require('../models');
+const { Op } = require('sequelize');
 
 class KPIService {
   async getTotalRevenue(days = 30) {
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - days);
 
-    const currentRevenue = await Invoice.sum("totalAmount", {
+    const currentRevenue = await Invoice.sum('totalAmount', {
       where: {
-        paymentStatus: "completed",
-        createdAt: { [Op.gte]: startDate },
-      },
-    });
+        paymentStatus: 'completed',
+        createdAt: { [Op.gte]: startDate }
+      }
+    }) || 0;
 
     const previousStartDate = new Date(startDate);
     previousStartDate.setDate(previousStartDate.getDate() - days);
 
-    const previousRevenue = await Invoice.sum("totalAmount", {
+    const previousRevenue = await Invoice.sum('totalAmount', {
       where: {
-        paymentStatus: "completed",
+        paymentStatus: 'completed',
         createdAt: {
           [Op.gte]: previousStartDate,
-          [Op.lt]: startDate,
-        },
-      },
-    });
+          [Op.lt]: startDate
+        }
+      }
+    }) || 0;
 
-    const change = previousRevenue
-      ? ((currentRevenue - previousRevenue) / previousRevenue) * 100
+    const change = previousRevenue 
+      ? ((currentRevenue - previousRevenue) / previousRevenue) * 100 
       : 0;
 
     return {
-      value: parseFloat(currentRevenue || 0).toFixed(2),
+      value: parseFloat(currentRevenue).toFixed(2),
       change: parseFloat(change).toFixed(2),
-      period: `Last ${days} days`,
+      period: `Last ${days} days`
     };
   }
 
   async getAverageTransactionValue() {
     const avgValue = await Invoice.findOne({
       attributes: [
-        [sequelize.fn("AVG", sequelize.col("total_amount")), "avgValue"],
+        [sequelize.fn('AVG', sequelize.col('total_amount')), 'avgValue']
       ],
-      where: { paymentStatus: "completed" },
-      raw: true,
+      where: { paymentStatus: 'completed' },
+      raw: true
     });
 
     return {
-      value: parseFloat(avgValue.avgValue || 0).toFixed(2),
+      value: parseFloat(avgValue?.avgValue || 0).toFixed(2)
     };
   }
 
   async getTopSellingProducts(limit = 10) {
     const topProducts = await InvoiceItem.findAll({
       attributes: [
-        "productId",
-        [sequelize.fn("SUM", sequelize.col("quantity")), "totalQuantity"],
-        [sequelize.fn("SUM", sequelize.col("subtotal")), "totalRevenue"],
+        'product_id',
+        [sequelize.fn('SUM', sequelize.col('quantity')), 'total_quantity'],
+        [sequelize.fn('SUM', sequelize.col('subtotal')), 'total_revenue']
       ],
-      include: [
-        {
-          model: Product,
-          as: "product",
-          attributes: ["name", "brand", "pictureUrl"],
-        },
-      ],
-      group: ["productId", "product.id"],
-      order: [[sequelize.literal("totalQuantity"), "DESC"]],
+      include: [{
+        model: Product,
+        as: 'product',
+        attributes: ['name', 'brand', 'picture_url']
+      }],
+      group: ['product_id', 'product.id'],
+      order: [[sequelize.fn('SUM', sequelize.col('quantity')), 'DESC']],
       limit,
-      raw: false,
+      raw: true
     });
 
-    return topProducts.map((item) => ({
-      productId: item.productId,
-      name: item.product.name,
-      brand: item.product.brand,
-      pictureUrl: item.product.pictureUrl,
-      quantitySold: parseInt(item.get("totalQuantity")),
-      revenue: parseFloat(item.get("totalRevenue")).toFixed(2),
+    return topProducts.map(item => ({
+      productId: item.product_id,
+      name: item['product.name'],
+      brand: item['product.brand'],
+      pictureUrl: item['product.picture_url'],
+      quantitySold: parseInt(item.total_quantity || 0),
+      revenue: parseFloat(item.total_revenue || 0).toFixed(2)
     }));
   }
 
   async getLowStockProducts(threshold = 10) {
     const lowStockProducts = await Product.findAll({
       where: {
-        stockQuantity: { [Op.lte]: threshold },
+        stockQuantity: { [Op.lte]: threshold }
       },
-      order: [["stockQuantity", "ASC"]],
-      limit: 20,
+      order: [['stock_quantity', 'ASC']],
+      limit: 20
     });
 
-    return lowStockProducts.map((product) => ({
+    return lowStockProducts.map(product => ({
       id: product.id,
       name: product.name,
       brand: product.brand,
       stockQuantity: product.stockQuantity,
-      pictureUrl: product.pictureUrl,
+      pictureUrl: product.pictureUrl
     }));
   }
 
@@ -111,8 +103,8 @@ class KPIService {
 
     const newCustomers = await Customer.count({
       where: {
-        createdAt: { [Op.gte]: startDate },
-      },
+        createdAt: { [Op.gte]: startDate }
+      }
     });
 
     const dailyRate = (newCustomers / days).toFixed(2);
@@ -120,15 +112,15 @@ class KPIService {
     return {
       newCustomers,
       dailyRate,
-      period: `Last ${days} days`,
+      period: `Last ${days} days`
     };
   }
 
-  async getSalesGrowthRate(period = "monthly") {
+  async getSalesGrowthRate(period = 'monthly') {
     const now = new Date();
     let currentStart, previousStart, previousEnd;
 
-    if (period === "weekly") {
+    if (period === 'weekly') {
       currentStart = new Date(now.setDate(now.getDate() - 7));
       previousStart = new Date(currentStart);
       previousStart.setDate(previousStart.getDate() - 7);
@@ -139,82 +131,91 @@ class KPIService {
       previousEnd = new Date(now.getFullYear(), now.getMonth(), 0);
     }
 
-    const currentSales = await Invoice.sum("totalAmount", {
+    const currentSales = await Invoice.sum('totalAmount', {
       where: {
-        paymentStatus: "completed",
-        createdAt: { [Op.gte]: currentStart },
-      },
-    });
+        paymentStatus: 'completed',
+        createdAt: { [Op.gte]: currentStart }
+      }
+    }) || 0;
 
-    const previousSales = await Invoice.sum("totalAmount", {
+    const previousSales = await Invoice.sum('totalAmount', {
       where: {
-        paymentStatus: "completed",
+        paymentStatus: 'completed',
         createdAt: {
           [Op.gte]: previousStart,
-          [Op.lte]: previousEnd,
-        },
-      },
-    });
+          [Op.lte]: previousEnd
+        }
+      }
+    }) || 0;
 
-    const growthRate = previousSales
-      ? ((currentSales - previousSales) / previousSales) * 100
+    const growthRate = previousSales 
+      ? ((currentSales - previousSales) / previousSales) * 100 
       : 0;
 
     return {
-      currentSales: parseFloat(currentSales || 0).toFixed(2),
-      previousSales: parseFloat(previousSales || 0).toFixed(2),
+      currentSales: parseFloat(currentSales).toFixed(2),
+      previousSales: parseFloat(previousSales).toFixed(2),
       growthRate: parseFloat(growthRate).toFixed(2),
-      period,
+      period
     };
   }
 
   async getPaymentMethodDistribution() {
     const distribution = await Invoice.findAll({
       attributes: [
-        "paymentMethod",
-        [sequelize.fn("COUNT", sequelize.col("id")), "count"],
-        [sequelize.fn("SUM", sequelize.col("total_amount")), "totalAmount"],
+        'payment_method',
+        [sequelize.fn('COUNT', sequelize.col('id')), 'count'],
+        [sequelize.fn('SUM', sequelize.col('total_amount')), 'total_amount']
       ],
-      where: { paymentStatus: "completed" },
-      group: ["paymentMethod"],
-      raw: true,
+      where: { paymentStatus: 'completed' },
+      group: ['payment_method'],
+      raw: true
     });
 
-    return distribution.map((item) => ({
-      method: item.paymentMethod,
+    if (!distribution || distribution.length === 0) {
+      return [];
+    }
+
+    return distribution.map(item => ({
+      method: item.payment_method,
       count: parseInt(item.count),
-      totalAmount: parseFloat(item.totalAmount).toFixed(2),
+      totalAmount: parseFloat(item.total_amount || 0).toFixed(2)
     }));
   }
 
   async getAllKPIs() {
-    const [
-      totalRevenue,
-      averageTransaction,
-      topProducts,
-      lowStock,
-      customerAcquisition,
-      salesGrowth,
-      paymentDistribution,
-    ] = await Promise.all([
-      this.getTotalRevenue(),
-      this.getAverageTransactionValue(),
-      this.getTopSellingProducts(),
-      this.getLowStockProducts(),
-      this.getCustomerAcquisitionRate(),
-      this.getSalesGrowthRate(),
-      this.getPaymentMethodDistribution(),
-    ]);
+    try {
+      const [
+        totalRevenue,
+        averageTransaction,
+        topProducts,
+        lowStock,
+        customerAcquisition,
+        salesGrowth,
+        paymentDistribution
+      ] = await Promise.all([
+        this.getTotalRevenue(),
+        this.getAverageTransactionValue(),
+        this.getTopSellingProducts(),
+        this.getLowStockProducts(),
+        this.getCustomerAcquisitionRate(),
+        this.getSalesGrowthRate(),
+        this.getPaymentMethodDistribution()
+      ]);
 
-    return {
-      totalRevenue,
-      averageTransaction,
-      topProducts,
-      lowStock,
-      customerAcquisition,
-      salesGrowth,
-      paymentDistribution,
-    };
+      return {
+        totalRevenue,
+        averageTransaction,
+        topProducts,
+        lowStock,
+        customerAcquisition,
+        salesGrowth,
+        paymentDistribution
+      };
+    } catch (error) {
+      console.error('Error getting KPIs:', error);
+      throw error;
+    }
   }
 }
 
