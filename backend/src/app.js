@@ -5,12 +5,10 @@ const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
 const swaggerUi = require("swagger-ui-express");
 const swaggerJsdoc = require("swagger-jsdoc");
-
 const {
   errorHandler,
   notFound,
 } = require("./middleware/errorHandler.middleware");
-
 const authRoutes = require("./routes/auth.routes");
 const productRoutes = require("./routes/product.routes");
 const customerRoutes = require("./routes/customer.routes");
@@ -30,8 +28,8 @@ app.use(
 
 // Rate limiting
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
+  windowMs: 15 * 60 * 1000,
+  max: 100,
   message: "Too many requests from this IP, please try again later.",
 });
 app.use("/api/", limiter);
@@ -91,6 +89,24 @@ app.use("/api/products", productRoutes);
 app.use("/api/customers", customerRoutes);
 app.use("/api/invoices", invoiceRoutes);
 app.use("/api/reports", reportRoutes);
+
+// ROOT ROUTE - ADD THIS!
+app.get("/", (req, res) => {
+  res.json({
+    message: "🚀 Trinity API is running!",
+    version: "1.0.0",
+    status: "active",
+    endpoints: {
+      health: "/health",
+      docs: "/api-docs",
+      auth: "/api/auth",
+      products: "/api/products",
+      customers: "/api/customers",
+      invoices: "/api/invoices",
+      reports: "/api/reports",
+    },
+  });
+});
 
 // Error handling
 app.use(notFound);
