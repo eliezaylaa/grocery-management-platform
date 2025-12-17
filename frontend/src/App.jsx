@@ -8,6 +8,7 @@ import { DashboardPage } from './pages/DashboardPage';
 import { ProductsPage } from './pages/ProductsPage';
 import { CustomersPage } from './pages/CustomersPage';
 import { InvoicesPage } from './pages/InvoicesPage';
+import { ReportsPage } from './pages/ReportsPage';
 
 function App() {
   return (
@@ -25,7 +26,7 @@ function App() {
             <Route path="products" element={<ProductsPage />} />
             <Route path="customers" element={<CustomersPage />} />
             <Route path="invoices" element={<InvoicesPage />} />
-            <Route path="reports" element={<DashboardPage />} />
+            <Route path="reports" element={<ReportsPage />} />
           </Route>
 
           <Route path="*" element={<Navigate to="/" replace />} />
