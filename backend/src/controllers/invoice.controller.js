@@ -1,180 +1,181 @@
-const { Invoice, InvoiceItem, Product, Customer } = require("../models");
-const { sequelize } = require("../models");
+const { Invoice, InvoiceItem, Product, User, sequelize } = require('../models');
 
-exports.getAll = async (req, res, next) => {
+exports.getInvoices = async (req, res) => {
   try {
-    const { page = 1, limit = 20, status, method, customerId } = req.query;
+    const { page = 1, limit = 10 } = req.query;
     const offset = (page - 1) * limit;
-    const where = {};
 
-    if (status) where.paymentStatus = status;
-    if (method) where.paymentMethod = method;
-    if (customerId) where.customerId = customerId;
-
-    const { count, rows } = await Invoice.findAndCountAll({
-      where,
+    const { rows: invoices, count } = await Invoice.findAndCountAll({
       include: [
         {
-          model: Customer,
-          as: "customer",
-          attributes: ["firstName", "lastName", "email"],
+          model: User,
+          as: 'user',
+          attributes: ['id', 'email', 'firstName', 'lastName']
         },
+        {
+          model: InvoiceItem,
+          as: 'items',
+          include: [{ model: Product, as: 'product' }]
+        }
       ],
+      order: [['createdAt', 'DESC']],
       limit: parseInt(limit),
-      offset,
-      order: [["createdAt", "DESC"]],
+      offset: parseInt(offset)
     });
 
     res.json({
-      invoices: rows,
+      invoices,
       total: count,
       page: parseInt(page),
-      totalPages: Math.ceil(count / limit),
+      totalPages: Math.ceil(count / limit)
     });
   } catch (error) {
-    next(error);
+    res.status(500).json({ error: error.message });
   }
 };
 
-exports.getById = async (req, res, next) => {
+exports.getMyInvoices = async (req, res) => {
   try {
-    const invoice = await Invoice.findByPk(req.params.id, {
+    const invoices = await Invoice.findAll({
+      where: { userId: req.user.id },
       include: [
         {
-          model: Customer,
-          as: "customer",
-        },
-        {
           model: InvoiceItem,
-          as: "items",
-          include: [
-            {
-              model: Product,
-              as: "product",
-            },
-          ],
-        },
+          as: 'items',
+          include: [{ model: Product, as: 'product' }]
+        }
       ],
+      order: [['createdAt', 'DESC']]
     });
 
-    if (!invoice) {
-      return res.status(404).json({ error: "Invoice not found" });
-    }
-
-    res.json(invoice);
+    res.json({ invoices });
   } catch (error) {
-    next(error);
+    res.status(500).json({ error: error.message });
   }
 };
 
-exports.create = async (req, res, next) => {
-  const t = await sequelize.transaction();
+exports.createInvoice = async (req, res) => {
+  const transaction = await sequelize.transaction();
 
   try {
-    const { customerId, items, paymentMethod } = req.body;
+    const { userId, paymentMethod, paymentStatus, items } = req.body;
+
+    // If customer role, can only create for themselves
+    const targetUserId = req.user.role === 'customer' ? req.user.id : (userId || req.user.id);
 
     let totalAmount = 0;
-    const itemsData = [];
 
+    // Calculate total and check stock
     for (const item of items) {
       const product = await Product.findByPk(item.productId);
       if (!product) {
-        await t.rollback();
-        return res
-          .status(404)
-          .json({ error: `Product ${item.productId} not found` });
+        await transaction.rollback();
+        return res.status(404).json({ error: `Product ${item.productId} not found` });
       }
 
       if (product.stockQuantity < item.quantity) {
-        await t.rollback();
+        await transaction.rollback();
         return res.status(400).json({
-          error: `Insufficient stock for ${product.name}. Available: ${product.stockQuantity}`,
+          error: `Insufficient stock for ${product.name}. Available: ${product.stockQuantity}`
         });
       }
 
-      const subtotal = product.price * item.quantity;
-      totalAmount += subtotal;
+      totalAmount += item.quantity * parseFloat(product.price);
+    }
 
-      itemsData.push({
+    // Generate invoice number
+    const invoiceCount = await Invoice.count();
+    const invoiceNumber = `INV-${new Date().getFullYear()}-${String(invoiceCount + 1).padStart(5, '0')}`;
+
+    // Create invoice
+    const invoice = await Invoice.create({
+      invoiceNumber,
+      userId: targetUserId,
+      totalAmount: totalAmount.toFixed(2),
+      paymentMethod: paymentMethod || 'card',
+      paymentStatus: paymentStatus || 'pending'
+    }, { transaction });
+
+    // Create invoice items and update stock
+    for (const item of items) {
+      const product = await Product.findByPk(item.productId);
+      const unitPrice = parseFloat(product.price);
+      const subtotal = item.quantity * unitPrice;
+
+      await InvoiceItem.create({
+        invoiceId: invoice.id,
         productId: item.productId,
         quantity: item.quantity,
-        unitPrice: product.price,
-        subtotal,
-      });
+        unitPrice: unitPrice.toFixed(2),
+        subtotal: subtotal.toFixed(2)
+      }, { transaction });
 
-      product.stockQuantity -= item.quantity;
-      await product.save({ transaction: t });
+      await product.update({
+        stockQuantity: product.stockQuantity - item.quantity
+      }, { transaction });
     }
 
-    const invoiceNumber = `INV-${Date.now()}-${Math.floor(
-      Math.random() * 1000
-    )}`;
-
-    const invoice = await Invoice.create(
-      {
-        invoiceNumber,
-        customerId,
-        totalAmount,
-        paymentMethod,
-        paymentStatus: "pending",
-      },
-      { transaction: t }
-    );
-
-    for (const itemData of itemsData) {
-      await InvoiceItem.create(
-        {
-          invoiceId: invoice.id,
-          ...itemData,
-        },
-        { transaction: t }
-      );
-    }
-
-    await t.commit();
+    await transaction.commit();
 
     const fullInvoice = await Invoice.findByPk(invoice.id, {
       include: [
-        { model: Customer, as: "customer" },
+        { model: User, as: 'user', attributes: ['id', 'email', 'firstName', 'lastName'] },
         {
           model: InvoiceItem,
-          as: "items",
-          include: [{ model: Product, as: "product" }],
-        },
-      ],
+          as: 'items',
+          include: [{ model: Product, as: 'product' }]
+        }
+      ]
     });
 
-    res.status(201).json(fullInvoice);
+    res.status(201).json({ invoice: fullInvoice });
   } catch (error) {
-    await t.rollback();
-    next(error);
+    await transaction.rollback();
+    res.status(500).json({ error: error.message });
   }
 };
 
-exports.update = async (req, res, next) => {
+exports.updateInvoice = async (req, res) => {
   try {
-    const invoice = await Invoice.findByPk(req.params.id);
+    const { id } = req.params;
+    const { paymentStatus } = req.body;
+
+    const invoice = await Invoice.findByPk(id);
     if (!invoice) {
-      return res.status(404).json({ error: "Invoice not found" });
+      return res.status(404).json({ error: 'Invoice not found' });
     }
 
-    await invoice.update(req.body);
-    res.json(invoice);
+    await invoice.update({ paymentStatus });
+
+    const updatedInvoice = await Invoice.findByPk(id, {
+      include: [
+        { model: User, as: 'user', attributes: ['id', 'email', 'firstName', 'lastName'] },
+        {
+          model: InvoiceItem,
+          as: 'items',
+          include: [{ model: Product, as: 'product' }]
+        }
+      ]
+    });
+
+    res.json({ invoice: updatedInvoice });
   } catch (error) {
-    next(error);
+    res.status(500).json({ error: error.message });
   }
 };
 
-exports.delete = async (req, res, next) => {
+exports.deleteInvoice = async (req, res) => {
   try {
-    const invoice = await Invoice.findByPk(req.params.id);
+    const { id } = req.params;
+
+    const invoice = await Invoice.findByPk(id);
     if (!invoice) {
-      return res.status(404).json({ error: "Invoice not found" });
+      return res.status(404).json({ error: 'Invoice not found' });
     }
 
     await invoice.destroy();
-    res.json({ message: "Invoice deleted successfully" });
+    res.json({ message: 'Invoice deleted successfully' });
   } catch (error) {
-    next(error);
+    res.status(500).json({ error: error.message });
   }
 };

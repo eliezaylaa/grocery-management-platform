@@ -1,31 +1,41 @@
-import React from 'react';
-import { Link, Outlet, useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
-import { 
-  LayoutDashboard, 
-  Package, 
-  Users, 
-  FileText, 
-  BarChart3, 
-  LogOut 
-} from 'lucide-react';
+import React from "react";
+import { Link, Outlet, useNavigate, useLocation } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
+import {
+  LayoutDashboard,
+  Package,
+  Users,
+  FileText,
+  BarChart3,
+  UserCog,
+  LogOut,
+} from "lucide-react";
 
 export const Layout = () => {
   const { logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const handleLogout = () => {
     logout();
-    navigate('/login');
+    navigate("/login");
   };
 
   const navigation = [
-    { name: 'Dashboard', href: '/', icon: LayoutDashboard },
-    { name: 'Products', href: '/products', icon: Package },
-    { name: 'Customers', href: '/customers', icon: Users },
-    { name: 'Invoices', href: '/invoices', icon: FileText },
-    { name: 'Reports', href: '/reports', icon: BarChart3 },
+    { name: "Dashboard", href: "/", icon: LayoutDashboard },
+    { name: "Products", href: "/products", icon: Package },
+    { name: "Customers", href: "/customers", icon: Users },
+    { name: "Invoices", href: "/invoices", icon: FileText },
+    { name: "Reports", href: "/reports", icon: BarChart3 },
+    { name: "Users", href: "/users", icon: UserCog },
   ];
+
+  const isActive = (href) => {
+    if (href === "/") {
+      return location.pathname === "/";
+    }
+    return location.pathname.startsWith(href);
+  };
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -44,7 +54,11 @@ export const Layout = () => {
               <Link
                 key={item.name}
                 to={item.href}
-                className="flex items-center gap-3 px-4 py-3 text-gray-700 rounded-lg hover:bg-blue-50 hover:text-blue-600 transition-colors"
+                className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                  isActive(item.href)
+                    ? "bg-blue-50 text-blue-600 font-medium"
+                    : "text-gray-700 hover:bg-gray-50"
+                }`}
               >
                 <item.icon size={20} />
                 <span>{item.name}</span>

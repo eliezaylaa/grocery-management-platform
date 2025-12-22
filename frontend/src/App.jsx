@@ -6,9 +6,9 @@ import { Layout } from './components/Layout';
 import { LoginPage } from './pages/LoginPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { ProductsPage } from './pages/ProductsPage';
-import { CustomersPage } from './pages/CustomersPage';
 import { InvoicesPage } from './pages/InvoicesPage';
 import { ReportsPage } from './pages/ReportsPage';
+import { UsersPage } from './pages/UsersPage';
 
 function App() {
   return (
@@ -24,9 +24,9 @@ function App() {
           }>
             <Route index element={<DashboardPage />} />
             <Route path="products" element={<ProductsPage />} />
-            <Route path="customers" element={<CustomersPage />} />
             <Route path="invoices" element={<InvoicesPage />} />
             <Route path="reports" element={<ReportsPage />} />
+            <Route path="users" element={<UsersPage />} />
           </Route>
 
           <Route path="*" element={<Navigate to="/" replace />} />

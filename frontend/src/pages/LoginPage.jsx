@@ -1,25 +1,32 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 
 export const LoginPage = () => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
   const { login } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
+    setError("");
     setLoading(true);
 
     try {
-      await login(email, password);
-      navigate('/');
+      const userData = await login(email, password);
+
+      // Redirect based on role
+      if (userData.role === "customer") {
+        navigate("/shop");
+      } else {
+        navigate("/");
+      }
     } catch (err) {
-      setError(err.response?.data?.error || 'Login failed');
+      setError(err.response?.data?.error || "Login failed");
     } finally {
       setLoading(false);
     }
@@ -73,7 +80,7 @@ export const LoginPage = () => {
             disabled={loading}
             className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
           >
-            {loading ? 'Logging in...' : 'Login'}
+            {loading ? "Logging in..." : "Login"}
           </button>
         </form>
       </div>

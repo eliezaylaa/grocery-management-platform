@@ -1,12 +1,21 @@
 const express = require("express");
 const router = express.Router();
 const invoiceController = require("../controllers/invoice.controller");
-const { verifyToken } = require("../middleware/auth.middleware");
+const {
+  verifyToken,
+  isAdmin,
+  isManager,
+} = require("../middleware/auth.middleware");
 
-router.get("/", verifyToken, invoiceController.getAll);
-router.get("/:id", verifyToken, invoiceController.getById);
-router.post("/", verifyToken, invoiceController.create);
-router.put("/:id", verifyToken, invoiceController.update);
-router.delete("/:id", verifyToken, invoiceController.delete);
+// AUTHENTICATED USERS
+router.get("/", verifyToken, isManager, invoiceController.getInvoices);
+router.get("/my-orders", verifyToken, invoiceController.getMyInvoices);
+router.post("/", verifyToken, invoiceController.createInvoice);
+
+// MANAGER / ADMIN
+router.put("/:id", verifyToken, isManager, invoiceController.updateInvoice);
+
+// ADMIN ONLY
+router.delete("/:id", verifyToken, isAdmin, invoiceController.deleteInvoice);
 
 module.exports = router;

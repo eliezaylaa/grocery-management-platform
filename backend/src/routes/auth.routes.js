@@ -1,23 +1,13 @@
-const express = require("express");
+const express = require('express');
 const router = express.Router();
-const authController = require("../controllers/auth.controller");
-const { validateBody } = require("../middleware/validation.middleware");
-const Joi = require("joi");
+const authController = require('../controllers/auth.controller');
+const { verifyToken } = require('../middleware/auth.middleware');
 
-const registerSchema = Joi.object({
-  email: Joi.string().email().required(),
-  password: Joi.string().min(6).required(),
-  role: Joi.string().valid("admin", "manager", "employee").optional(),
-});
-
-const loginSchema = Joi.object({
-  email: Joi.string().email().required(),
-  password: Joi.string().required(),
-});
-
-router.post("/register", validateBody(registerSchema), authController.register);
-router.post("/login", validateBody(loginSchema), authController.login);
-router.post("/refresh", authController.refresh);
-router.post("/logout", authController.logout);
+router.post('/register', authController.register);
+router.post('/login', authController.login);
+router.post('/refresh', authController.refreshToken);
+router.post('/logout', authController.logout);
+router.get('/profile', verifyToken, authController.getProfile);
+router.put('/profile', verifyToken, authController.updateProfile);
 
 module.exports = router;

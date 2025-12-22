@@ -1,55 +1,71 @@
-const bcrypt = require("bcrypt");
-const jwt = require("jsonwebtoken");
-const { User, RefreshToken } = require("../models");
-const { v4: uuidv4 } = require("uuid");
+const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
+const { User, RefreshToken } = require('../models');
+const { v4: uuidv4 } = require('uuid');
 
 class AuthService {
-  async register(email, password, role = "employee") {
+  async register(userData) {
+    const { email, password, role, firstName, lastName, phoneNumber, address, zipCode, city, country } = userData;
+
     const existingUser = await User.findOne({ where: { email } });
     if (existingUser) {
-      throw new Error("Email already exists");
+      throw new Error('User already exists');
     }
 
-    const passwordHash = await bcrypt.hash(password, 10);
-    const user = await User.create({ email, passwordHash, role });
+    const hashedPassword = await bcrypt.hash(password, 10);
 
-    return {
-      id: user.id,
-      email: user.email,
-      role: user.role,
-    };
+    const user = await User.create({
+      email,
+      password: hashedPassword,
+      role: role || 'customer',
+      firstName,
+      lastName,
+      phoneNumber,
+      address,
+      zipCode,
+      city,
+      country
+    });
+
+    const userResponse = user.toJSON();
+    delete userResponse.password;
+
+    return userResponse;
   }
 
   async login(email, password) {
     const user = await User.findOne({ where: { email } });
     if (!user) {
-      throw new Error("Invalid credentials");
+      throw new Error('Invalid credentials');
     }
 
-    const isValidPassword = await bcrypt.compare(password, user.passwordHash);
-    if (!isValidPassword) {
-      throw new Error("Invalid credentials");
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
+      throw new Error('Invalid credentials');
     }
 
     const accessToken = this.generateAccessToken(user);
     const refreshToken = await this.generateRefreshToken(user);
 
+    const userResponse = user.toJSON();
+    delete userResponse.password;
+
     return {
       accessToken,
       refreshToken,
-      user: {
-        id: user.id,
-        email: user.email,
-        role: user.role,
-      },
+      user: userResponse
     };
   }
 
   generateAccessToken(user) {
     return jwt.sign(
-      { id: user.id, email: user.email, role: user.role },
+      {
+        id: user.id,
+        email: user.email,
+        role: user.role
+      },
       process.env.JWT_SECRET,
-      { expiresIn: process.env.JWT_EXPIRE || "15m" }
+      { expiresIn: process.env.JWT_EXPIRE || '15m' }
     );
   }
 
@@ -59,9 +75,9 @@ class AuthService {
     expiresAt.setDate(expiresAt.getDate() + 7);
 
     await RefreshToken.create({
-      token,
       userId: user.id,
-      expiresAt,
+      token,
+      expiresAt
     });
 
     return token;
@@ -70,28 +86,22 @@ class AuthService {
   async refreshAccessToken(refreshToken) {
     const tokenRecord = await RefreshToken.findOne({
       where: { token: refreshToken, isRevoked: false },
-      include: [{ model: User, as: "user" }],
+      include: [{ model: User, as: 'user' }]
     });
 
-    if (!tokenRecord) {
-      throw new Error("Invalid refresh token");
-    }
-
-    if (new Date() > tokenRecord.expiresAt) {
-      throw new Error("Refresh token expired");
+    if (!tokenRecord || new Date() > tokenRecord.expiresAt) {
+      throw new Error('Invalid or expired refresh token');
     }
 
     const accessToken = this.generateAccessToken(tokenRecord.user);
-    return accessToken;
+
+    return { accessToken };
   }
 
   async logout(refreshToken) {
-    const tokenRecord = await RefreshToken.findOne({
-      where: { token: refreshToken },
-    });
+    const tokenRecord = await RefreshToken.findOne({ where: { token: refreshToken } });
     if (tokenRecord) {
-      tokenRecord.isRevoked = true;
-      await tokenRecord.save();
+      await tokenRecord.update({ isRevoked: true });
     }
   }
 }

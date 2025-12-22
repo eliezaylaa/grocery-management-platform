@@ -1,4 +1,4 @@
-const { Invoice, InvoiceItem, Product, Customer, sequelize } = require('../models');
+const { Invoice, InvoiceItem, Product, User, sequelize } = require('../models');
 const { Op } = require('sequelize');
 
 class KPIService {
@@ -101,8 +101,9 @@ class KPIService {
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - days);
 
-    const newCustomers = await Customer.count({
+    const newCustomers = await User.count({
       where: {
+        role: 'customer',
         createdAt: { [Op.gte]: startDate }
       }
     });
