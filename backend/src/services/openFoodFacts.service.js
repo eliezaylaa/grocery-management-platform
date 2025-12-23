@@ -2,7 +2,7 @@ const axios = require("axios");
 
 class OpenFoodFactsService {
   constructor() {
-    this.baseUrl = "https://world.openfoodfacts.org/api/v0";
+     this.baseUrl = "https://world.openfoodfacts.org/api/v0";
   }
 
   async getProductByBarcode(barcode) {
@@ -43,24 +43,64 @@ class OpenFoodFactsService {
     }
   }
 
-  async searchProducts(searchTerm) {
+  async searchProducts(searchTerm, page = 1) {
     try {
       const response = await axios.get(`${this.baseUrl}/cgi/search.pl`, {
         params: {
           search_terms: searchTerm,
           json: 1,
-          page_size: 20,
+          page_size: 24,
+          page: page,
         },
       });
 
-      return response.data.products.map((product) => ({
-        barcode: product.code,
-        name: product.product_name,
-        brand: product.brands,
-        pictureUrl: product.image_url,
-      }));
+      return {
+        products: response.data.products.map((product) => ({
+          barcode: product.code,
+          name: product.product_name || "Unknown",
+          brand: product.brands || "Unknown",
+          category: product.categories || "Unknown",
+          pictureUrl: product.image_url || product.image_small_url,
+          description: product.generic_name,
+          nutritionGrade: product.nutrition_grades,
+        })),
+        total: response.data.count,
+        page: parseInt(page),
+        totalPages: Math.ceil(response.data.count / 24),
+      };
     } catch (error) {
       throw new Error("Failed to search products in Open Food Facts");
+    }
+  }
+
+  async getProductsByCategory(category, page = 1) {
+    try {
+      const response = await axios.get(
+        `https://world.openfoodfacts.org/category/${encodeURIComponent(category)}.json`,
+        {
+          params: {
+            page: page,
+            page_size: 24,
+          },
+        }
+      );
+
+      return {
+        products: response.data.products.map((product) => ({
+          barcode: product.code,
+          name: product.product_name || "Unknown",
+          brand: product.brands || "Unknown",
+          category: product.categories || category,
+          pictureUrl: product.image_url || product.image_small_url,
+          description: product.generic_name,
+          nutritionGrade: product.nutrition_grades,
+        })),
+        total: response.data.count,
+        page: parseInt(page),
+        totalPages: Math.ceil(response.data.count / 24),
+      };
+    } catch (error) {
+      throw new Error("Failed to fetch products by category from Open Food Facts");
     }
   }
 }

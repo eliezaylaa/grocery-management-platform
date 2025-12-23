@@ -117,6 +117,66 @@ class KPIService {
     };
   }
 
+  async getRecentCustomers(limit = 10) {
+    const recentCustomers = await User.findAll({
+      where: { role: 'customer' },
+      attributes: ['id', 'email', 'firstName', 'lastName', 'city', 'country', 'createdAt'],
+      order: [['createdAt', 'DESC']],
+      limit,
+      include: [{
+        model: Invoice,
+        as: 'invoices',
+        attributes: ['id', 'totalAmount', 'paymentStatus'],
+        limit: 5,
+        order: [['createdAt', 'DESC']]
+      }]
+    });
+
+    return recentCustomers.map(customer => ({
+      id: customer.id,
+      email: customer.email,
+      firstName: customer.firstName,
+      lastName: customer.lastName,
+      city: customer.city,
+      country: customer.country,
+      createdAt: customer.createdAt,
+      totalOrders: customer.invoices?.length || 0,
+      totalSpent: customer.invoices?.reduce((sum, inv) => sum + parseFloat(inv.totalAmount || 0), 0).toFixed(2) || '0.00'
+    }));
+  }
+
+  async getTopCustomers(limit = 10) {
+    const topCustomers = await Invoice.findAll({
+      attributes: [
+        'user_id',
+        [sequelize.fn('COUNT', sequelize.col('Invoice.id')), 'order_count'],
+        [sequelize.fn('SUM', sequelize.col('total_amount')), 'total_spent']
+      ],
+      where: { paymentStatus: 'completed' },
+      include: [{
+        model: User,
+        as: 'user',
+        attributes: ['id', 'email', 'firstName', 'lastName', 'city', 'country'],
+        where: { role: 'customer' }
+      }],
+      group: ['user_id', 'user.id'],
+      order: [[sequelize.fn('SUM', sequelize.col('total_amount')), 'DESC']],
+      limit,
+      raw: true
+    });
+
+    return topCustomers.map(item => ({
+      id: item['user.id'],
+      email: item['user.email'],
+      firstName: item['user.firstName'],
+      lastName: item['user.lastName'],
+      city: item['user.city'],
+      country: item['user.country'],
+      orderCount: parseInt(item.order_count || 0),
+      totalSpent: parseFloat(item.total_spent || 0).toFixed(2)
+    }));
+  }
+
   async getSalesGrowthRate(period = 'monthly') {
     const now = new Date();
     let currentStart, previousStart, previousEnd;
@@ -193,7 +253,9 @@ class KPIService {
         lowStock,
         customerAcquisition,
         salesGrowth,
-        paymentDistribution
+        paymentDistribution,
+        recentCustomers,
+        topCustomers
       ] = await Promise.all([
         this.getTotalRevenue(),
         this.getAverageTransactionValue(),
@@ -201,7 +263,9 @@ class KPIService {
         this.getLowStockProducts(),
         this.getCustomerAcquisitionRate(),
         this.getSalesGrowthRate(),
-        this.getPaymentMethodDistribution()
+        this.getPaymentMethodDistribution(),
+        this.getRecentCustomers(),
+        this.getTopCustomers()
       ]);
 
       return {
@@ -211,7 +275,9 @@ class KPIService {
         lowStock,
         customerAcquisition,
         salesGrowth,
-        paymentDistribution
+        paymentDistribution,
+        recentCustomers,
+        topCustomers
       };
     } catch (error) {
       console.error('Error getting KPIs:', error);

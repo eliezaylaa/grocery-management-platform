@@ -14,8 +14,12 @@ exports.getUsers = async (req, res) => {
 
 exports.createUser = async (req, res) => {
   try {
-    const { email, password, role } = req.body;
+    const { email, password, role, firstName, lastName, phoneNumber, address, zipCode, city, country } = req.body;
     
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email and password are required' });
+    }
+
     const existingUser = await User.findOne({ where: { email } });
     if (existingUser) {
       return res.status(400).json({ error: 'User already exists' });
@@ -25,7 +29,14 @@ exports.createUser = async (req, res) => {
     const user = await User.create({
       email,
       password: hashedPassword,
-      role: role || 'employee'
+      role: role || 'employee',
+      firstName,
+      lastName,
+      phoneNumber,
+      address,
+      zipCode,
+      city,
+      country
     });
 
     const userResponse = user.toJSON();

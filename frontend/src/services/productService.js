@@ -29,5 +29,17 @@ export const productService = {
   async syncWithOpenFoodFacts(barcode) {
     const { data } = await api.post(`/products/sync/${barcode}`);
     return data;
+  },
+
+  async searchOpenFoodFacts(query, page = 1) {
+    const { data } = await api.get('/products/search/openfoodfacts', { 
+      params: { query, page } 
+    });
+    return data;
+  },
+
+  async bulkImport(barcodes) {
+    const { data } = await api.post('/products/import/bulk', { barcodes });
+    return data;
   }
 };

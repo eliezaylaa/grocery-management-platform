@@ -226,7 +226,19 @@ const UserModal = ({ user, onClose, onSave }) => {
         }
         await api.put(`/users/${user.id}`, updateData);
       } else {
-        await api.post('/auth/register', formData);
+        // Use /users endpoint for admin to create users with any role
+        await api.post('/users', {
+          email: formData.email,
+          password: formData.password,
+          role: formData.role,
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          phoneNumber: formData.phoneNumber,
+          address: formData.address,
+          zipCode: formData.zipCode,
+          city: formData.city,
+          country: formData.country
+        });
       }
       onSave();
       onClose();
