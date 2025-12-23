@@ -9,6 +9,9 @@ import { ProductsPage } from './pages/ProductsPage';
 import { InvoicesPage } from './pages/InvoicesPage';
 import { ReportsPage } from './pages/ReportsPage';
 import { UsersPage } from './pages/UsersPage';
+import { ShopPage } from './pages/ShopPage';
+import { CartPage } from './pages/CartPage';
+import { MyOrdersPage } from './pages/MyOrdersPage';
 
 function App() {
   return (
@@ -23,6 +26,9 @@ function App() {
             </ProtectedRoute>
           }>
             <Route index element={<DashboardPage />} />
+            <Route path="shop" element={<ShopPage />} />
+            <Route path="cart" element={<CartPage />} />
+            <Route path="my-orders" element={<MyOrdersPage />} />
             <Route path="products" element={<ProductsPage />} />
             <Route path="invoices" element={<InvoicesPage />} />
             <Route path="reports" element={<ReportsPage />} />

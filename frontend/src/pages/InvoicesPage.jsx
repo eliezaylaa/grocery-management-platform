@@ -1,20 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { invoiceService } from '../services/invoiceService';
-import { productService } from '../services/productService';
-import api from '../services/api';
-import { Plus, Trash2, Eye } from 'lucide-react';
+import { CheckCircle, XCircle, Clock, AlertCircle, Eye, Package, CreditCard, Banknote, X } from 'lucide-react';
 
 export const InvoicesPage = () => {
   const [invoices, setInvoices] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [showModal, setShowModal] = useState(false);
-  const [users, setUsers] = useState([]);
-  const [products, setProducts] = useState([]);
+  const [filter, setFilter] = useState('all');
+  const [selectedInvoice, setSelectedInvoice] = useState(null);
 
   useEffect(() => {
     loadInvoices();
-    loadUsers();
-    loadProducts();
   }, []);
 
   const loadInvoices = async () => {
@@ -29,323 +24,324 @@ export const InvoicesPage = () => {
     }
   };
 
-  const loadUsers = async () => {
+  const handleUpdateStatus = async (invoiceId, newStatus) => {
     try {
-      const { data } = await api.get('/users');
-      setUsers(data.users || []);
-    } catch (error) {
-      console.error('Failed to load users:', error);
-    }
-  };
-
-  const loadProducts = async () => {
-    try {
-      const data = await productService.getAll();
-      setProducts(data.products || []);
-    } catch (error) {
-      console.error('Failed to load products:', error);
-    }
-  };
-
-  const handleDelete = async (id) => {
-    if (window.confirm('Are you sure you want to delete this invoice?')) {
-      try {
-        await invoiceService.delete(id);
-        loadInvoices();
-      } catch (error) {
-        alert('Failed to delete invoice');
+      await invoiceService.update(invoiceId, { paymentStatus: newStatus });
+      loadInvoices();
+      if (selectedInvoice?.id === invoiceId) {
+        setSelectedInvoice({ ...selectedInvoice, paymentStatus: newStatus });
       }
+      alert(`Order ${newStatus === 'completed' ? 'approved' : 'updated'} successfully!`);
+    } catch (error) {
+      alert('Failed to update order status');
     }
   };
 
-  const getStatusColor = (status) => {
-    const colors = {
-      completed: 'bg-green-100 text-green-800',
-      pending: 'bg-yellow-100 text-yellow-800',
-      failed: 'bg-red-100 text-red-800',
-      refunded: 'bg-gray-100 text-gray-800'
-    };
-    return colors[status] || 'bg-gray-100 text-gray-800';
+  const getStatusIcon = (status) => {
+    switch (status) {
+      case 'completed': return <CheckCircle className="text-green-500" size={20} />;
+      case 'pending': return <Clock className="text-orange-500" size={20} />;
+      case 'failed': return <XCircle className="text-red-500" size={20} />;
+      case 'refunded': return <AlertCircle className="text-blue-500" size={20} />;
+      default: return <Clock className="text-gray-500" size={20} />;
+    }
   };
+
+  const getStatusBadge = (status) => {
+    const styles = {
+      completed: 'bg-green-100 text-green-800',
+      pending: 'bg-orange-100 text-orange-800',
+      failed: 'bg-red-100 text-red-800',
+      refunded: 'bg-blue-100 text-blue-800'
+    };
+    return styles[status] || 'bg-gray-100 text-gray-800';
+  };
+
+  const getPaymentIcon = (method) => {
+    switch (method) {
+      case 'card': return <CreditCard size={16} />;
+      case 'cash': return <Banknote size={16} />;
+      case 'paypal': return <span className="text-xs font-bold">PP</span>;
+      default: return null;
+    }
+  };
+
+  const filteredInvoices = filter === 'all' 
+    ? invoices 
+    : invoices.filter(inv => inv.paymentStatus === filter);
+
+  const pendingCount = invoices.filter(inv => inv.paymentStatus === 'pending').length;
+
+  if (loading) {
+    return <div className="text-center py-20">Loading invoices...</div>;
+  }
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Orders</h1>
-          <p className="text-gray-600 mt-2">Manage customer orders</p>
+          <h1 className="text-3xl font-bold text-gray-900">Invoices</h1>
+          <p className="text-gray-600 mt-2">Manage orders and approve pending payments</p>
         </div>
+        {pendingCount > 0 && (
+          <div className="bg-orange-100 text-orange-800 px-4 py-2 rounded-lg flex items-center gap-2">
+            <Clock size={20} />
+            <span className="font-semibold">{pendingCount} pending approval</span>
+          </div>
+        )}
+      </div>
+
+      {/* Filter Tabs */}
+      <div className="flex flex-wrap gap-2">
         <button
-          onClick={() => setShowModal(true)}
-          className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+          onClick={() => setFilter('all')}
+          className={`px-4 py-2 rounded-lg ${filter === 'all' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700'}`}
         >
-          <Plus size={20} />
-          Create Order
+          All ({invoices.length})
+        </button>
+        <button
+          onClick={() => setFilter('pending')}
+          className={`px-4 py-2 rounded-lg flex items-center gap-2 ${filter === 'pending' ? 'bg-orange-600 text-white' : 'bg-gray-100 text-gray-700'}`}
+        >
+          <Clock size={16} />
+          Pending ({invoices.filter(i => i.paymentStatus === 'pending').length})
+        </button>
+        <button
+          onClick={() => setFilter('completed')}
+          className={`px-4 py-2 rounded-lg flex items-center gap-2 ${filter === 'completed' ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-700'}`}
+        >
+          <CheckCircle size={16} />
+          Completed ({invoices.filter(i => i.paymentStatus === 'completed').length})
+        </button>
+        <button
+          onClick={() => setFilter('failed')}
+          className={`px-4 py-2 rounded-lg flex items-center gap-2 ${filter === 'failed' ? 'bg-red-600 text-white' : 'bg-gray-100 text-gray-700'}`}
+        >
+          <XCircle size={16} />
+          Failed ({invoices.filter(i => i.paymentStatus === 'failed').length})
         </button>
       </div>
 
-      {loading ? (
-        <div className="text-center py-20">Loading orders...</div>
-      ) : (
-        <div className="bg-white rounded-lg shadow overflow-hidden">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Order #</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Customer</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Payment</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {invoices.map((invoice) => (
-                <tr key={invoice.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap font-medium">{invoice.invoiceNumber}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    {invoice.user?.firstName} {invoice.user?.lastName || invoice.user?.email}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">${parseFloat(invoice.totalAmount).toFixed(2)}</td>
-                  <td className="px-6 py-4 whitespace-nowrap capitalize">{invoice.paymentMethod}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(invoice.paymentStatus)}`}>
-                      {invoice.paymentStatus}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">{new Date(invoice.createdAt).toLocaleDateString()}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+      {/* Invoices Table */}
+      <div className="bg-white rounded-lg shadow overflow-hidden">
+        <table className="min-w-full divide-y divide-gray-200">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Invoice</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Customer</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Payment</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-200">
+            {filteredInvoices.map((invoice) => (
+              <tr key={invoice.id} className={`hover:bg-gray-50 ${invoice.paymentStatus === 'pending' ? 'bg-orange-50' : ''}`}>
+                <td className="px-6 py-4">
+                  <p className="font-medium">{invoice.invoiceNumber}</p>
+                  <p className="text-xs text-gray-500">{invoice.items?.length || 0} items</p>
+                </td>
+                <td className="px-6 py-4">
+                  <p className="font-medium">
+                    {invoice.user?.firstName || invoice.user?.lastName 
+                      ? `${invoice.user?.firstName || ''} ${invoice.user?.lastName || ''}`.trim()
+                      : 'Unknown'}
+                  </p>
+                  <p className="text-sm text-gray-500">{invoice.user?.email}</p>
+                </td>
+                <td className="px-6 py-4">
+                  <span className="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 rounded text-sm">
+                    {getPaymentIcon(invoice.paymentMethod)}
+                    {invoice.paymentMethod?.toUpperCase()}
+                  </span>
+                </td>
+                <td className="px-6 py-4">
+                  <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium ${getStatusBadge(invoice.paymentStatus)}`}>
+                    {getStatusIcon(invoice.paymentStatus)}
+                    {invoice.paymentStatus?.charAt(0).toUpperCase() + invoice.paymentStatus?.slice(1)}
+                  </span>
+                </td>
+                <td className="px-6 py-4 font-semibold">
+                  ${parseFloat(invoice.totalAmount).toFixed(2)}
+                </td>
+                <td className="px-6 py-4 text-sm text-gray-500">
+                  {new Date(invoice.createdAt).toLocaleDateString()}
+                </td>
+                <td className="px-6 py-4">
+                  <div className="flex items-center gap-2">
                     <button
-                      onClick={() => handleDelete(invoice.id)}
-                      className="text-red-600 hover:text-red-900"
+                      onClick={() => setSelectedInvoice(invoice)}
+                      className="p-2 text-blue-600 hover:bg-blue-50 rounded"
+                      title="View details"
                     >
-                      <Trash2 size={18} />
+                      <Eye size={18} />
                     </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+                    {invoice.paymentStatus === 'pending' && (
+                      <>
+                        <button
+                          onClick={() => handleUpdateStatus(invoice.id, 'completed')}
+                          className="p-2 text-green-600 hover:bg-green-50 rounded"
+                          title="Approve"
+                        >
+                          <CheckCircle size={18} />
+                        </button>
+                        <button
+                          onClick={() => handleUpdateStatus(invoice.id, 'failed')}
+                          className="p-2 text-red-600 hover:bg-red-50 rounded"
+                          title="Reject"
+                        >
+                          <XCircle size={18} />
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
 
-      {showModal && (
-        <InvoiceModal
-          users={users}
-          products={products}
-          onClose={() => setShowModal(false)}
-          onSave={loadInvoices}
+        {filteredInvoices.length === 0 && (
+          <div className="text-center py-12 text-gray-500">
+            No invoices found
+          </div>
+        )}
+      </div>
+
+      {/* Invoice Detail Modal */}
+      {selectedInvoice && (
+        <InvoiceDetailModal
+          invoice={selectedInvoice}
+          onClose={() => setSelectedInvoice(null)}
+          onUpdateStatus={handleUpdateStatus}
         />
       )}
     </div>
   );
 };
 
-const InvoiceModal = ({ users, products, onClose, onSave }) => {
-  const [formData, setFormData] = useState({
-    userId: '',
-    paymentMethod: 'cash',
-    items: []
-  });
-  const [selectedProduct, setSelectedProduct] = useState('');
-  const [quantity, setQuantity] = useState(1);
-  const [loading, setLoading] = useState(false);
-
-  const addItem = () => {
-    const product = products.find(p => p.id === selectedProduct);
-    if (!product) return;
-
-    const existingItem = formData.items.find(i => i.productId === selectedProduct);
-    if (existingItem) {
-      setFormData({
-        ...formData,
-        items: formData.items.map(i =>
-          i.productId === selectedProduct
-            ? { ...i, quantity: i.quantity + quantity }
-            : i
-        )
-      });
-    } else {
-      setFormData({
-        ...formData,
-        items: [...formData.items, {
-          productId: selectedProduct,
-          product: product,
-          quantity: quantity,
-          unitPrice: parseFloat(product.price)
-        }]
-      });
-    }
-    setSelectedProduct('');
-    setQuantity(1);
-  };
-
-  const removeItem = (productId) => {
-    setFormData({
-      ...formData,
-      items: formData.items.filter(i => i.productId !== productId)
-    });
-  };
-
-  const calculateTotal = () => {
-    return formData.items.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!formData.userId || formData.items.length === 0) {
-      alert('Please select a customer and add at least one product');
-      return;
-    }
-
-    setLoading(true);
-    try {
-      await invoiceService.create({
-        userId: formData.userId,
-        paymentMethod: formData.paymentMethod,
-        paymentStatus: 'completed',
-        items: formData.items.map(item => ({
-          productId: item.productId,
-          quantity: item.quantity,
-          unitPrice: item.unitPrice
-        }))
-      });
-      onSave();
-      onClose();
-    } catch (error) {
-      alert('Failed to create order: ' + (error.response?.data?.error || error.message));
-    } finally {
-      setLoading(false);
-    }
-  };
-
+// Invoice Detail Modal
+const InvoiceDetailModal = ({ invoice, onClose, onUpdateStatus }) => {
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 w-full max-w-3xl max-h-[90vh] overflow-y-auto">
-        <h2 className="text-2xl font-bold mb-6">Create New Order</h2>
-
-        <form onSubmit={handleSubmit} className="space-y-6">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        {/* Header */}
+        <div className="flex items-center justify-between p-6 border-b">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Customer *</label>
-            <select
-              value={formData.userId}
-              onChange={(e) => setFormData({ ...formData, userId: e.target.value })}
-              required
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">Select a customer</option>
-              {users.filter(u => u.role === 'customer').map(user => (
-                <option key={user.id} value={user.id}>
-                  {user.firstName} {user.lastName} - {user.email}
-                </option>
-              ))}
-            </select>
+            <h2 className="text-xl font-bold">{invoice.invoiceNumber}</h2>
+            <p className="text-sm text-gray-500">
+              {new Date(invoice.createdAt).toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+              })}
+            </p>
           </div>
+          <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
+            <X size={24} />
+          </button>
+        </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Payment Method *</label>
-            <select
-              value={formData.paymentMethod}
-              onChange={(e) => setFormData({ ...formData, paymentMethod: e.target.value })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="cash">Cash</option>
-              <option value="card">Card</option>
-              <option value="paypal">PayPal</option>
-            </select>
+        {/* Customer Info */}
+        <div className="p-6 border-b bg-gray-50">
+          <h3 className="font-semibold mb-2">Customer</h3>
+          <p className="font-medium">
+            {invoice.user?.firstName || invoice.user?.lastName 
+              ? `${invoice.user?.firstName || ''} ${invoice.user?.lastName || ''}`.trim()
+              : 'Unknown'}
+          </p>
+          <p className="text-sm text-gray-600">{invoice.user?.email}</p>
+          {invoice.user?.phoneNumber && (
+            <p className="text-sm text-gray-600">{invoice.user?.phoneNumber}</p>
+          )}
+        </div>
+
+        {/* Order Items */}
+        <div className="p-6 border-b">
+          <h3 className="font-semibold mb-4">Order Items</h3>
+          <div className="space-y-3">
+            {invoice.items?.map((item) => (
+              <div key={item.id} className="flex items-center gap-4">
+                {item.product?.pictureUrl ? (
+                  <img src={item.product.pictureUrl} alt={item.product?.name} className="w-16 h-16 object-cover rounded" />
+                ) : (
+                  <div className="w-16 h-16 bg-gray-200 rounded flex items-center justify-center">
+                    <Package size={24} className="text-gray-400" />
+                  </div>
+                )}
+                <div className="flex-1">
+                  <p className="font-medium">{item.product?.name || 'Product'}</p>
+                  <p className="text-sm text-gray-500">
+                    {item.quantity} × ${parseFloat(item.unitPrice).toFixed(2)}
+                  </p>
+                </div>
+                <p className="font-semibold">${parseFloat(item.subtotal).toFixed(2)}</p>
+              </div>
+            ))}
           </div>
+        </div>
 
-          <div className="border-t pt-4">
-            <h3 className="font-semibold mb-3">Add Products</h3>
+        {/* Payment Info */}
+        <div className="p-6 border-b">
+          <div className="flex justify-between items-center mb-4">
+            <span className="text-gray-600">Payment Method</span>
+            <span className="font-medium uppercase">{invoice.paymentMethod}</span>
+          </div>
+          <div className="flex justify-between items-center mb-4">
+            <span className="text-gray-600">Status</span>
+            <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium ${
+              invoice.paymentStatus === 'completed' ? 'bg-green-100 text-green-800' :
+              invoice.paymentStatus === 'pending' ? 'bg-orange-100 text-orange-800' :
+              invoice.paymentStatus === 'failed' ? 'bg-red-100 text-red-800' :
+              'bg-blue-100 text-blue-800'
+            }`}>
+              {invoice.paymentStatus?.charAt(0).toUpperCase() + invoice.paymentStatus?.slice(1)}
+            </span>
+          </div>
+          <div className="flex justify-between items-center text-xl font-bold">
+            <span>Total</span>
+            <span>${parseFloat(invoice.totalAmount).toFixed(2)}</span>
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div className="p-6">
+          {invoice.paymentStatus === 'pending' ? (
             <div className="flex gap-3">
-              <select
-                value={selectedProduct}
-                onChange={(e) => setSelectedProduct(e.target.value)}
-                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg"
-              >
-                <option value="">Select a product</option>
-                {products.map(product => (
-                  <option key={product.id} value={product.id}>
-                    {product.name} - ${product.price} (Stock: {product.stockQuantity})
-                  </option>
-                ))}
-              </select>
-              <input
-                type="number"
-                min="1"
-                value={quantity}
-                onChange={(e) => setQuantity(parseInt(e.target.value))}
-                className="w-20 px-4 py-2 border border-gray-300 rounded-lg"
-              />
               <button
-                type="button"
-                onClick={addItem}
-                disabled={!selectedProduct}
-                className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 disabled:opacity-50"
+                onClick={() => {
+                  onUpdateStatus(invoice.id, 'completed');
+                  onClose();
+                }}
+                className="flex-1 flex items-center justify-center gap-2 bg-green-600 text-white py-3 rounded-lg hover:bg-green-700"
               >
-                Add
+                <CheckCircle size={20} />
+                Approve Payment
+              </button>
+              <button
+                onClick={() => {
+                  onUpdateStatus(invoice.id, 'failed');
+                  onClose();
+                }}
+                className="flex-1 flex items-center justify-center gap-2 bg-red-600 text-white py-3 rounded-lg hover:bg-red-700"
+              >
+                <XCircle size={20} />
+                Reject
               </button>
             </div>
-          </div>
-
-          {formData.items.length > 0 && (
-            <div className="border rounded-lg overflow-hidden">
-              <table className="min-w-full">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Product</th>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Price</th>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Qty</th>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Subtotal</th>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500"></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {formData.items.map((item) => (
-                    <tr key={item.productId} className="border-t">
-                      <td className="px-4 py-2">{item.product.name}</td>
-                      <td className="px-4 py-2">${item.unitPrice.toFixed(2)}</td>
-                      <td className="px-4 py-2">{item.quantity}</td>
-                      <td className="px-4 py-2">${(item.quantity * item.unitPrice).toFixed(2)}</td>
-                      <td className="px-4 py-2">
-                        <button
-                          type="button"
-                          onClick={() => removeItem(item.productId)}
-                          className="text-red-600 hover:text-red-900"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                  <tr className="border-t bg-gray-50 font-bold">
-                    <td colSpan="3" className="px-4 py-2 text-right">Total:</td>
-                    <td className="px-4 py-2">${calculateTotal().toFixed(2)}</td>
-                    <td></td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          )}
-
-          <div className="flex gap-3 pt-4">
+          ) : (
             <button
-              type="submit"
-              disabled={loading}
-              className="flex-1 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50"
-            >
-              {loading ? 'Creating...' : 'Create Order'}
-            </button>
-            <button
-              type="button"
               onClick={onClose}
-              className="flex-1 bg-gray-200 text-gray-700 py-2 rounded-lg hover:bg-gray-300"
+              className="w-full bg-gray-200 text-gray-700 py-3 rounded-lg hover:bg-gray-300"
             >
-              Cancel
+              Close
             </button>
-          </div>
-        </form>
+          )}
+        </div>
       </div>
     </div>
   );

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import api from '../services/api';
-import { Package, Calendar, CreditCard } from 'lucide-react';
+import { invoiceService } from '../services/invoiceService';
+import { Package, Clock, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
 
 export const MyOrdersPage = () => {
   const [orders, setOrders] = useState([]);
@@ -11,10 +11,9 @@ export const MyOrdersPage = () => {
   }, []);
 
   const loadOrders = async () => {
-    setLoading(true);
     try {
-      const { data } = await api.get('/invoices/my-orders');
-      setOrders(data.invoices);
+      const data = await invoiceService.getMyOrders();
+      setOrders(data.invoices || []);
     } catch (error) {
       console.error('Failed to load orders:', error);
     } finally {
@@ -22,88 +21,133 @@ export const MyOrdersPage = () => {
     }
   };
 
-  const getStatusColor = (status) => {
-    const colors = {
+  const getStatusIcon = (status) => {
+    switch (status) {
+      case 'completed':
+        return <CheckCircle className="text-green-500" size={20} />;
+      case 'pending':
+        return <Clock className="text-orange-500" size={20} />;
+      case 'failed':
+        return <XCircle className="text-red-500" size={20} />;
+      case 'refunded':
+        return <AlertCircle className="text-blue-500" size={20} />;
+      default:
+        return <Clock className="text-gray-500" size={20} />;
+    }
+  };
+
+  const getStatusBadge = (status) => {
+    const styles = {
       completed: 'bg-green-100 text-green-800',
-      pending: 'bg-yellow-100 text-yellow-800',
+      pending: 'bg-orange-100 text-orange-800',
       failed: 'bg-red-100 text-red-800',
-      refunded: 'bg-gray-100 text-gray-800'
+      refunded: 'bg-blue-100 text-blue-800'
     };
-    return colors[status] || 'bg-gray-100 text-gray-800';
+    return styles[status] || 'bg-gray-100 text-gray-800';
+  };
+
+  const getPaymentMethodLabel = (method) => {
+    const labels = {
+      card: '💳 Card',
+      cash: '💵 Cash',
+      paypal: '🅿️ PayPal'
+    };
+    return labels[method] || method;
   };
 
   if (loading) {
     return <div className="text-center py-20">Loading orders...</div>;
   }
 
+  if (orders.length === 0) {
+    return (
+      <div className="text-center py-20">
+        <Package size={64} className="mx-auto text-gray-300 mb-4" />
+        <h2 className="text-2xl font-bold text-gray-700 mb-2">No orders yet</h2>
+        <p className="text-gray-500">Start shopping to see your orders here</p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold text-gray-900">My Orders</h1>
+      <div>
+        <h1 className="text-3xl font-bold text-gray-900">My Orders</h1>
+        <p className="text-gray-600 mt-2">View your order history</p>
+      </div>
 
-      {orders.length === 0 ? (
-        <div className="text-center py-20">
-          <Package size={64} className="mx-auto text-gray-400 mb-4" />
-          <p className="text-gray-600">You haven't placed any orders yet</p>
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {orders.map((order) => (
-            <div key={order.id} className="bg-white rounded-lg shadow-md p-6">
-              <div className="flex items-start justify-between mb-4">
-                <div>
-                  <h3 className="text-lg font-semibold">Order #{order.invoiceNumber}</h3>
-                  <div className="flex items-center gap-4 text-sm text-gray-600 mt-2">
-                    <span className="flex items-center gap-1">
-                      <Calendar size={16} />
-                      {new Date(order.createdAt).toLocaleDateString()}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <CreditCard size={16} />
-                      {order.paymentMethod}
-                    </span>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <span className={`inline-block px-3 py-1 text-sm font-semibold rounded-full ${getStatusColor(order.paymentStatus)}`}>
-                    {order.paymentStatus}
-                  </span>
-                  <p className="text-2xl font-bold text-green-600 mt-2">
-                    ${parseFloat(order.totalAmount).toFixed(2)}
-                  </p>
-                </div>
+      <div className="space-y-4">
+        {orders.map((order) => (
+          <div key={order.id} className="bg-white rounded-lg shadow overflow-hidden">
+            {/* Order Header */}
+            <div className="bg-gray-50 px-6 py-4 flex flex-wrap items-center justify-between gap-4">
+              <div>
+                <p className="font-semibold text-lg">{order.invoiceNumber}</p>
+                <p className="text-sm text-gray-500">
+                  {new Date(order.createdAt).toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  })}
+                </p>
               </div>
-
-              <div className="border-t pt-4">
-                <h4 className="font-semibold mb-3">Items:</h4>
-                <div className="space-y-2">
-                  {order.items?.map((item) => (
-                    <div key={item.id} className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        {item.product?.pictureUrl && (
-                          <img
-                            src={item.product.pictureUrl}
-                            alt={item.product.name}
-                            className="w-12 h-12 object-cover rounded"
-                          />
-                        )}
-                        <div>
-                          <p className="font-medium">{item.product?.name}</p>
-                          <p className="text-sm text-gray-600">
-                            ${parseFloat(item.unitPrice).toFixed(2)} × {item.quantity}
-                          </p>
-                        </div>
-                      </div>
-                      <p className="font-semibold">
-                        ${parseFloat(item.subtotal).toFixed(2)}
-                      </p>
-                    </div>
-                  ))}
-                </div>
+              <div className="flex items-center gap-4">
+                <span className="text-sm text-gray-600">
+                  {getPaymentMethodLabel(order.paymentMethod)}
+                </span>
+                <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium ${getStatusBadge(order.paymentStatus)}`}>
+                  {getStatusIcon(order.paymentStatus)}
+                  {order.paymentStatus.charAt(0).toUpperCase() + order.paymentStatus.slice(1)}
+                </span>
               </div>
             </div>
-          ))}
-        </div>
-      )}
+
+            {/* Order Items */}
+            <div className="px-6 py-4">
+              <div className="space-y-3">
+                {order.items?.map((item) => (
+                  <div key={item.id} className="flex items-center gap-4">
+                    {item.product?.pictureUrl ? (
+                      <img src={item.product.pictureUrl} alt={item.product?.name} className="w-16 h-16 object-cover rounded" />
+                    ) : (
+                      <div className="w-16 h-16 bg-gray-200 rounded flex items-center justify-center">
+                        <Package size={24} className="text-gray-400" />
+                      </div>
+                    )}
+                    <div className="flex-1">
+                      <p className="font-medium">{item.product?.name || 'Product'}</p>
+                      <p className="text-sm text-gray-500">Qty: {item.quantity} × ${parseFloat(item.unitPrice).toFixed(2)}</p>
+                    </div>
+                    <p className="font-semibold">${parseFloat(item.subtotal).toFixed(2)}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Order Footer */}
+            <div className="bg-gray-50 px-6 py-4 flex justify-between items-center">
+              {order.paymentStatus === 'pending' && order.paymentMethod === 'cash' && (
+                <p className="text-sm text-orange-600">
+                  ⏳ Waiting for manager approval
+                </p>
+              )}
+              {order.paymentStatus === 'completed' && (
+                <p className="text-sm text-green-600">
+                  ✓ Payment confirmed
+                </p>
+              )}
+              {order.paymentStatus !== 'pending' && order.paymentStatus !== 'completed' && (
+                <span></span>
+              )}
+              <p className="text-xl font-bold">
+                Total: ${parseFloat(order.totalAmount).toFixed(2)}
+              </p>
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 };

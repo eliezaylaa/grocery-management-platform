@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
-import { Plus, Edit, Trash2, Shield, User as UserIcon } from 'lucide-react';
+import { Plus, Edit, Trash2, Shield, User as UserIcon, X, Mail, Phone, MapPin, Calendar, ShoppingBag } from 'lucide-react';
 
 export const UsersPage = () => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const [showDetailModal, setShowDetailModal] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
+  const [selectedUser, setSelectedUser] = useState(null);
   const [filterRole, setFilterRole] = useState('all');
 
   useEffect(() => {
@@ -34,6 +36,11 @@ export const UsersPage = () => {
         alert('Failed to delete user');
       }
     }
+  };
+
+  const handleRowClick = (user) => {
+    setSelectedUser(user);
+    setShowDetailModal(true);
   };
 
   const getRoleBadge = (role) => {
@@ -75,7 +82,7 @@ export const UsersPage = () => {
       </div>
 
       {/* Filter by Role */}
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
         <button
           onClick={() => setFilterRole('all')}
           className={`px-4 py-2 rounded-lg ${filterRole === 'all' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700'}`}
@@ -125,7 +132,11 @@ export const UsersPage = () => {
             </thead>
             <tbody className="divide-y divide-gray-200">
               {filteredUsers.map((user) => (
-                <tr key={user.id} className="hover:bg-gray-50">
+                <tr 
+                  key={user.id} 
+                  className="hover:bg-gray-50 cursor-pointer"
+                  onClick={() => handleRowClick(user)}
+                >
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
                       <div className={`w-10 h-10 rounded-full flex items-center justify-center ${getRoleBadge(user.role)}`}>
@@ -133,7 +144,7 @@ export const UsersPage = () => {
                       </div>
                       <div>
                         <p className="font-medium text-gray-900">
-                          {user.firstName} {user.lastName}
+                          {user.firstName || user.lastName ? `${user.firstName || ''} ${user.lastName || ''}`.trim() : 'No Name'}
                         </p>
                         <p className="text-sm text-gray-500">{user.email}</p>
                       </div>
@@ -154,7 +165,7 @@ export const UsersPage = () => {
                     {new Date(user.createdAt).toLocaleDateString()}
                   </td>
                   <td className="px-6 py-4">
-                    <div className="flex gap-2">
+                    <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
                       <button
                         onClick={() => {
                           setEditingUser(user);
@@ -186,6 +197,193 @@ export const UsersPage = () => {
           onSave={loadUsers}
         />
       )}
+
+      {showDetailModal && selectedUser && (
+        <UserDetailModal
+          user={selectedUser}
+          onClose={() => {
+            setShowDetailModal(false);
+            setSelectedUser(null);
+          }}
+          onEdit={() => {
+            setShowDetailModal(false);
+            setEditingUser(selectedUser);
+            setShowModal(true);
+          }}
+        />
+      )}
+    </div>
+  );
+};
+
+// User Detail Modal
+const UserDetailModal = ({ user, onClose, onEdit }) => {
+  const [orders, setOrders] = useState([]);
+  const [loadingOrders, setLoadingOrders] = useState(false);
+
+  useEffect(() => {
+    if (user.role === 'customer') {
+      loadUserOrders();
+    }
+  }, [user]);
+
+  const loadUserOrders = async () => {
+    setLoadingOrders(true);
+    try {
+      const { data } = await api.get(`/invoices?userId=${user.id}`);
+      setOrders(data.invoices || []);
+    } catch (error) {
+      console.error('Failed to load orders:', error);
+    } finally {
+      setLoadingOrders(false);
+    }
+  };
+
+  const totalSpent = orders
+    .filter(o => o.paymentStatus === 'completed')
+    .reduce((sum, o) => sum + parseFloat(o.totalAmount || 0), 0);
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        {/* Header */}
+        <div className="flex items-center justify-between p-6 border-b">
+          <h2 className="text-xl font-bold">User Details</h2>
+          <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
+            <X size={24} />
+          </button>
+        </div>
+
+        {/* User Info */}
+        <div className="p-6">
+          <div className="flex items-center gap-4 mb-6">
+            <div className={`w-16 h-16 rounded-full flex items-center justify-center ${
+              user.role === 'admin' ? 'bg-red-100' :
+              user.role === 'manager' ? 'bg-blue-100' :
+              user.role === 'employee' ? 'bg-green-100' : 'bg-purple-100'
+            }`}>
+              <UserIcon size={32} className={
+                user.role === 'admin' ? 'text-red-600' :
+                user.role === 'manager' ? 'text-blue-600' :
+                user.role === 'employee' ? 'text-green-600' : 'text-purple-600'
+              } />
+            </div>
+            <div>
+              <h3 className="text-xl font-semibold">
+                {user.firstName || user.lastName ? `${user.firstName || ''} ${user.lastName || ''}`.trim() : 'No Name'}
+              </h3>
+              <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium mt-1 ${
+                user.role === 'admin' ? 'bg-red-100 text-red-800' :
+                user.role === 'manager' ? 'bg-blue-100 text-blue-800' :
+                user.role === 'employee' ? 'bg-green-100 text-green-800' : 'bg-purple-100 text-purple-800'
+              }`}>
+                {user.role.toUpperCase()}
+              </span>
+            </div>
+          </div>
+
+          {/* Contact Info */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+              <Mail size={20} className="text-gray-500" />
+              <div>
+                <p className="text-xs text-gray-500">Email</p>
+                <p className="font-medium">{user.email}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+              <Phone size={20} className="text-gray-500" />
+              <div>
+                <p className="text-xs text-gray-500">Phone</p>
+                <p className="font-medium">{user.phoneNumber || 'Not provided'}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+              <MapPin size={20} className="text-gray-500" />
+              <div>
+                <p className="text-xs text-gray-500">Location</p>
+                <p className="font-medium">
+                  {user.address && `${user.address}, `}
+                  {user.city && `${user.city}, `}
+                  {user.zipCode && `${user.zipCode}, `}
+                  {user.country || 'Not provided'}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+              <Calendar size={20} className="text-gray-500" />
+              <div>
+                <p className="text-xs text-gray-500">Member Since</p>
+                <p className="font-medium">{new Date(user.createdAt).toLocaleDateString()}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Customer Stats & Orders */}
+          {user.role === 'customer' && (
+            <>
+              <div className="grid grid-cols-2 gap-4 mb-6">
+                <div className="bg-blue-50 p-4 rounded-lg text-center">
+                  <p className="text-3xl font-bold text-blue-600">{orders.length}</p>
+                  <p className="text-sm text-gray-600">Total Orders</p>
+                </div>
+                <div className="bg-green-50 p-4 rounded-lg text-center">
+                  <p className="text-3xl font-bold text-green-600">${totalSpent.toFixed(2)}</p>
+                  <p className="text-sm text-gray-600">Total Spent</p>
+                </div>
+              </div>
+
+              <h4 className="font-semibold mb-3 flex items-center gap-2">
+                <ShoppingBag size={18} />
+                Recent Orders
+              </h4>
+              
+              {loadingOrders ? (
+                <p className="text-center text-gray-500 py-4">Loading orders...</p>
+              ) : orders.length > 0 ? (
+                <div className="space-y-2 max-h-48 overflow-y-auto">
+                  {orders.slice(0, 5).map(order => (
+                    <div key={order.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <div>
+                        <p className="font-medium">{order.invoiceNumber}</p>
+                        <p className="text-xs text-gray-500">{new Date(order.createdAt).toLocaleDateString()}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-semibold">${parseFloat(order.totalAmount).toFixed(2)}</p>
+                        <span className={`text-xs px-2 py-0.5 rounded-full ${
+                          order.paymentStatus === 'completed' ? 'bg-green-100 text-green-800' :
+                          order.paymentStatus === 'pending' ? 'bg-orange-100 text-orange-800' :
+                          'bg-red-100 text-red-800'
+                        }`}>
+                          {order.paymentStatus}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-center text-gray-500 py-4">No orders yet</p>
+              )}
+            </>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="flex gap-3 p-6 border-t">
+          <button
+            onClick={onEdit}
+            className="flex-1 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700"
+          >
+            Edit User
+          </button>
+          <button
+            onClick={onClose}
+            className="flex-1 bg-gray-200 text-gray-700 py-2 rounded-lg hover:bg-gray-300"
+          >
+            Close
+          </button>
+        </div>
+      </div>
     </div>
   );
 };
@@ -226,7 +424,6 @@ const UserModal = ({ user, onClose, onSave }) => {
         }
         await api.put(`/users/${user.id}`, updateData);
       } else {
-        // Use /users endpoint for admin to create users with any role
         await api.post('/users', {
           email: formData.email,
           password: formData.password,
@@ -259,9 +456,7 @@ const UserModal = ({ user, onClose, onSave }) => {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                First Name
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">First Name</label>
               <input
                 type="text"
                 value={formData.firstName}
@@ -269,11 +464,8 @@ const UserModal = ({ user, onClose, onSave }) => {
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
               />
             </div>
-
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Last Name
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Last Name</label>
               <input
                 type="text"
                 value={formData.lastName}
@@ -284,9 +476,7 @@ const UserModal = ({ user, onClose, onSave }) => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Email *
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Email *</label>
             <input
               type="email"
               value={formData.email}
@@ -311,9 +501,7 @@ const UserModal = ({ user, onClose, onSave }) => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Role *
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Role *</label>
             <select
               value={formData.role}
               onChange={(e) => setFormData({ ...formData, role: e.target.value })}
@@ -328,15 +516,34 @@ const UserModal = ({ user, onClose, onSave }) => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Phone Number
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
             <input
               type="tel"
               value={formData.phoneNumber}
               onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
             />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">City</label>
+              <input
+                type="text"
+                value={formData.city}
+                onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Country</label>
+              <input
+                type="text"
+                value={formData.country}
+                onChange={(e) => setFormData({ ...formData, country: e.target.value })}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
           </div>
 
           <div className="flex gap-3 pt-4">

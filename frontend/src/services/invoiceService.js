@@ -6,6 +6,11 @@ export const invoiceService = {
     return data;
   },
 
+  async getMyOrders() {
+    const { data } = await api.get('/invoices/my-orders');
+    return data;
+  },
+
   async getById(id) {
     const { data } = await api.get(`/invoices/${id}`);
     return data;
