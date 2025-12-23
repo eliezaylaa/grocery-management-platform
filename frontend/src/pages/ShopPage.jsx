@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { productService } from '../services/productService';
-import { Search, Filter, ShoppingCart, Plus, Minus, ChevronDown, X } from 'lucide-react';
+import { Search, Filter, ShoppingCart, Plus, ChevronDown, X, Clock, Package } from 'lucide-react';
 
 export const ShopPage = () => {
   const [products, setProducts] = useState([]);
@@ -26,7 +26,6 @@ export const ShopPage = () => {
   });
 
   useEffect(() => {
-    // Load cart from localStorage
     const savedCart = JSON.parse(localStorage.getItem('cart') || '[]');
     setCart(savedCart);
   }, []);
@@ -42,7 +41,6 @@ export const ShopPage = () => {
         page: currentPage,
         limit: 12,
         search: searchTerm,
-        inStock: 'true',
         ...filters
       });
       setProducts(data.products);
@@ -58,6 +56,8 @@ export const ShopPage = () => {
   };
 
   const addToCart = (product) => {
+    if (product.stockQuantity === 0) return;
+    
     const existingIndex = cart.findIndex(item => item.id === product.id);
     let newCart;
     
@@ -78,6 +78,18 @@ export const ShopPage = () => {
   const getCartQuantity = (productId) => {
     const item = cart.find(item => item.id === productId);
     return item ? item.quantity : 0;
+  };
+
+  const formatRestockDate = (date) => {
+    if (!date) return null;
+    const restockDate = new Date(date);
+    const now = new Date();
+    const diffDays = Math.ceil((restockDate - now) / (1000 * 60 * 60 * 24));
+    
+    if (diffDays <= 0) return 'Restocking today';
+    if (diffDays === 1) return 'Restocking tomorrow';
+    if (diffDays <= 7) return `Restocking in ${diffDays} days`;
+    return `Restocking on ${restockDate.toLocaleDateString()}`;
   };
 
   const clearFilters = () => {
@@ -228,9 +240,16 @@ export const ShopPage = () => {
                       <Package size={48} className="text-gray-400" />
                     </div>
                   )}
-                  {product.stockQuantity < 10 && product.stockQuantity > 0 && (
+                  {product.stockQuantity === 0 && (
+                    <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+                      <span className="bg-red-600 text-white px-3 py-1 rounded-full text-sm font-semibold">
+                        Out of Stock
+                      </span>
+                    </div>
+                  )}
+                  {product.stockQuantity > 0 && product.stockQuantity < 10 && (
                     <span className="absolute top-2 right-2 bg-orange-500 text-white text-xs px-2 py-1 rounded">
-                      Low Stock
+                      Only {product.stockQuantity} left
                     </span>
                   )}
                 </div>
@@ -243,13 +262,40 @@ export const ShopPage = () => {
                     <span className="text-2xl font-bold text-blue-600">
                       ${parseFloat(product.price).toFixed(2)}
                     </span>
-                    <span className="text-sm text-gray-500">
-                      {product.stockQuantity} in stock
-                    </span>
+                    {product.stockQuantity > 0 ? (
+                      <span className="text-sm text-green-600">
+                        {product.stockQuantity} in stock
+                      </span>
+                    ) : (
+                      product.restockDate && (
+                        <span className="text-xs text-orange-600 flex items-center gap-1">
+                          <Clock size={12} />
+                          {formatRestockDate(product.restockDate)}
+                        </span>
+                      )
+                    )}
                   </div>
 
+                  {/* Restock info for out of stock items */}
+                  {product.stockQuantity === 0 && product.restockDate && (
+                    <div className="mt-2 p-2 bg-orange-50 rounded-lg">
+                      <p className="text-xs text-orange-700 flex items-center gap-1">
+                        <Clock size={14} />
+                        {formatRestockDate(product.restockDate)}
+                        {product.restockQuantity > 0 && ` (${product.restockQuantity} units)`}
+                      </p>
+                    </div>
+                  )}
+
                   <div className="mt-4">
-                    {getCartQuantity(product.id) > 0 ? (
+                    {product.stockQuantity === 0 ? (
+                      <button
+                        disabled
+                        className="w-full flex items-center justify-center gap-2 bg-gray-300 text-gray-500 py-2 rounded-lg cursor-not-allowed"
+                      >
+                        Out of Stock
+                      </button>
+                    ) : getCartQuantity(product.id) > 0 ? (
                       <div className="flex items-center justify-between bg-blue-50 rounded-lg p-2">
                         <span className="text-blue-600 font-medium">
                           {getCartQuantity(product.id)} in cart
@@ -265,8 +311,7 @@ export const ShopPage = () => {
                     ) : (
                       <button
                         onClick={() => addToCart(product)}
-                        disabled={product.stockQuantity === 0}
-                        className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                        className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700"
                       >
                         <ShoppingCart size={20} />
                         Add to Cart
@@ -303,12 +348,3 @@ export const ShopPage = () => {
     </div>
   );
 };
-
-const Package = ({ size, className }) => (
-  <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-    <path d="m7.5 4.27 9 5.15"/>
-    <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/>
-    <path d="m3.3 7 8.7 5 8.7-5"/>
-    <path d="M12 22V12"/>
-  </svg>
-);

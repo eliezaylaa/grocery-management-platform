@@ -21,7 +21,6 @@ exports.getAll = async (req, res, next) => {
     const offset = (page - 1) * limit;
     const where = {};
 
-    // Search filter (name, brand, barcode, description)
     if (search) {
       where[Op.or] = [
         { name: { [Op.iLike]: `%${search}%` } },
@@ -31,24 +30,20 @@ exports.getAll = async (req, res, next) => {
       ];
     }
 
-    // Category filter
     if (category) {
       where.category = { [Op.iLike]: `%${category}%` };
     }
 
-    // Brand filter
     if (brand) {
       where.brand = { [Op.iLike]: `%${brand}%` };
     }
 
-    // Price range filter
     if (minPrice || maxPrice) {
       where.price = {};
       if (minPrice) where.price[Op.gte] = parseFloat(minPrice);
       if (maxPrice) where.price[Op.lte] = parseFloat(maxPrice);
     }
 
-    // Stock filters
     if (lowStock === "true") {
       where.stockQuantity = { [Op.lte]: 10 };
     } else if (inStock === "true") {
@@ -57,7 +52,6 @@ exports.getAll = async (req, res, next) => {
       where.stockQuantity = { [Op.eq]: 0 };
     }
 
-    // Validate sort field
     const validSortFields = ['name', 'price', 'stockQuantity', 'createdAt', 'brand', 'category'];
     const orderField = validSortFields.includes(sortBy) ? sortBy : 'createdAt';
     const orderDirection = sortOrder.toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
@@ -69,7 +63,6 @@ exports.getAll = async (req, res, next) => {
       order: [[orderField, orderDirection]],
     });
 
-    // Get distinct categories and brands for filter dropdowns
     const categories = await Product.findAll({
       attributes: [[Product.sequelize.fn('DISTINCT', Product.sequelize.col('category')), 'category']],
       where: { category: { [Op.ne]: null } },
@@ -174,23 +167,26 @@ exports.syncWithOpenFoodFacts = async (req, res, next) => {
   }
 };
 
-// Search and import products from Open Food Facts
 exports.searchOpenFoodFacts = async (req, res, next) => {
   try {
     const { query, page = 1 } = req.query;
+    
+    console.log("Search request received:", { query, page });
     
     if (!query) {
       return res.status(400).json({ error: "Search query is required" });
     }
 
-    const products = await openFoodFactsService.searchProducts(query, page);
-    res.json({ products });
+    const result = await openFoodFactsService.searchProducts(query, page);
+    console.log("Search result:", { count: result.products.length });
+    
+    res.json(result);
   } catch (error) {
-    next(error);
+    console.error("Search error:", error);
+    res.status(500).json({ error: error.message });
   }
 };
 
-// Bulk import products from Open Food Facts
 exports.bulkImportFromOpenFoodFacts = async (req, res, next) => {
   try {
     const { barcodes } = req.body;
@@ -219,8 +215,8 @@ exports.bulkImportFromOpenFoodFacts = async (req, res, next) => {
           product = await Product.create({
             ...productData,
             barcode,
-            price: 0,
-            stockQuantity: 0,
+            price: (Math.random() * 20 + 1).toFixed(2),
+            stockQuantity: Math.floor(Math.random() * 50),
             lastSyncedAt: new Date(),
           });
         }

@@ -13,33 +13,28 @@ module.exports = (sequelize) => {
     },
     barcode: {
       type: DataTypes.STRING,
-      allowNull: true,
       unique: true
     },
     price: {
       type: DataTypes.DECIMAL(10, 2),
-      allowNull: false
+      allowNull: false,
+      defaultValue: 0
     },
     brand: {
-      type: DataTypes.STRING,
-      allowNull: true
+      type: DataTypes.STRING
     },
     category: {
-      type: DataTypes.STRING,
-      allowNull: true
+      type: DataTypes.STRING
     },
     pictureUrl: {
       type: DataTypes.STRING,
-      allowNull: true,
       field: 'picture_url'
     },
     description: {
-      type: DataTypes.TEXT,
-      allowNull: true
+      type: DataTypes.TEXT
     },
     nutritionalInfo: {
       type: DataTypes.JSONB,
-      allowNull: true,
       field: 'nutritional_info'
     },
     stockQuantity: {
@@ -47,19 +42,27 @@ module.exports = (sequelize) => {
       defaultValue: 0,
       field: 'stock_quantity'
     },
+    restockDate: {
+      type: DataTypes.DATE,
+      allowNull: true,
+      field: 'restock_date'
+    },
+    restockQuantity: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      defaultValue: 0,
+      field: 'restock_quantity'
+    },
     openFoodFactsId: {
       type: DataTypes.STRING,
-      allowNull: true,
       field: 'open_food_facts_id'
     },
     lastSyncedAt: {
       type: DataTypes.DATE,
-      allowNull: true,
       field: 'last_synced_at'
     }
   }, {
     tableName: 'products',
-    timestamps: true,
     underscored: true
   });
 

@@ -1,7 +1,6 @@
-
 import React, { useState, useEffect } from 'react';
 import { productService } from '../services/productService';
-import { Plus, Edit, Trash2, RefreshCw, Search, Filter, X, Download, ChevronDown } from 'lucide-react';
+import { Plus, Edit, Trash2, RefreshCw, Search, Filter, X, Download, ChevronDown, Clock, Package } from 'lucide-react';
 
 export const ProductsPage = () => {
   const [products, setProducts] = useState([]);
@@ -88,6 +87,12 @@ export const ProductsPage = () => {
       sortOrder: 'DESC'
     });
     setCurrentPage(1);
+  };
+
+  const formatRestockDate = (date) => {
+    if (!date) return null;
+    const restockDate = new Date(date);
+    return restockDate.toLocaleDateString();
   };
 
   const activeFiltersCount = Object.values(filters).filter(v => v && v !== 'createdAt' && v !== 'DESC').length;
@@ -190,26 +195,6 @@ export const ProductsPage = () => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Price Range</label>
-              <div className="flex gap-2">
-                <input
-                  type="number"
-                  placeholder="Min"
-                  value={filters.minPrice}
-                  onChange={(e) => setFilters({ ...filters, minPrice: e.target.value })}
-                  className="w-1/2 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                />
-                <input
-                  type="number"
-                  placeholder="Max"
-                  value={filters.maxPrice}
-                  onChange={(e) => setFilters({ ...filters, maxPrice: e.target.value })}
-                  className="w-1/2 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-            </div>
-
-            <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Stock Status</label>
               <select
                 value={filters.lowStock ? 'low' : filters.inStock}
@@ -241,19 +226,6 @@ export const ProductsPage = () => {
                 <option value="name">Name</option>
                 <option value="price">Price</option>
                 <option value="stockQuantity">Stock</option>
-                <option value="brand">Brand</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Order</label>
-              <select
-                value={filters.sortOrder}
-                onChange={(e) => setFilters({ ...filters, sortOrder: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="DESC">Descending</option>
-                <option value="ASC">Ascending</option>
               </select>
             </div>
           </div>
@@ -267,9 +239,20 @@ export const ProductsPage = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {products.map((product) => (
               <div key={product.id} className="bg-white rounded-lg shadow-md overflow-hidden">
-                {product.pictureUrl && (
-                  <img src={product.pictureUrl} alt={product.name} className="w-full h-48 object-cover" />
-                )}
+                <div className="relative">
+                  {product.pictureUrl ? (
+                    <img src={product.pictureUrl} alt={product.name} className="w-full h-48 object-cover" />
+                  ) : (
+                    <div className="w-full h-48 bg-gray-200 flex items-center justify-center">
+                      <Package size={48} className="text-gray-400" />
+                    </div>
+                  )}
+                  {product.stockQuantity === 0 && (
+                    <span className="absolute top-2 left-2 bg-red-600 text-white text-xs px-2 py-1 rounded">
+                      Out of Stock
+                    </span>
+                  )}
+                </div>
                 <div className="p-4">
                   <h3 className="font-semibold text-lg truncate">{product.name}</h3>
                   <p className="text-sm text-gray-600">{product.brand}</p>
@@ -279,10 +262,21 @@ export const ProductsPage = () => {
                     <span className="text-xl font-bold text-blue-600">
                       ${parseFloat(product.price).toFixed(2)}
                     </span>
-                    <span className={`text-sm ${product.stockQuantity < 10 ? 'text-red-600' : 'text-green-600'}`}>
+                    <span className={`text-sm ${product.stockQuantity === 0 ? 'text-red-600' : product.stockQuantity < 10 ? 'text-orange-600' : 'text-green-600'}`}>
                       Stock: {product.stockQuantity}
                     </span>
                   </div>
+
+                  {/* Restock Info */}
+                  {product.stockQuantity === 0 && product.restockDate && (
+                    <div className="mt-2 p-2 bg-orange-50 rounded-lg flex items-center gap-2">
+                      <Clock size={14} className="text-orange-600" />
+                      <span className="text-xs text-orange-700">
+                        Restock: {formatRestockDate(product.restockDate)}
+                        {product.restockQuantity > 0 && ` (${product.restockQuantity} units)`}
+                      </span>
+                    </div>
+                  )}
 
                   <div className="mt-4 flex gap-2">
                     <button
@@ -295,6 +289,7 @@ export const ProductsPage = () => {
                       <button
                         onClick={() => handleSync(product.barcode)}
                         className="flex items-center justify-center bg-green-100 text-green-600 px-3 py-2 rounded hover:bg-green-200"
+                        title="Sync with Open Food Facts"
                       >
                         <RefreshCw size={16} />
                       </button>
@@ -351,7 +346,9 @@ const ProductModal = ({ product, onClose, onSave }) => {
     category: product?.category || '',
     pictureUrl: product?.pictureUrl || '',
     description: product?.description || '',
-    stockQuantity: product?.stockQuantity || 0
+    stockQuantity: product?.stockQuantity || 0,
+    restockDate: product?.restockDate ? new Date(product.restockDate).toISOString().split('T')[0] : '',
+    restockQuantity: product?.restockQuantity || 0
   });
   const [loading, setLoading] = useState(false);
 
@@ -359,10 +356,16 @@ const ProductModal = ({ product, onClose, onSave }) => {
     e.preventDefault();
     setLoading(true);
     try {
+      const dataToSend = {
+        ...formData,
+        restockDate: formData.restockDate || null,
+        restockQuantity: formData.restockQuantity || 0
+      };
+      
       if (product) {
-        await productService.update(product.id, formData);
+        await productService.update(product.id, dataToSend);
       } else {
-        await productService.create(formData);
+        await productService.create(dataToSend);
       }
       onSave();
       onClose();
@@ -381,36 +384,66 @@ const ProductModal = ({ product, onClose, onSave }) => {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Name *</label>
-              <input type="text" name="name" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} required className="w-full px-4 py-2 border border-gray-300 rounded-lg" />
+              <input type="text" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} required className="w-full px-4 py-2 border border-gray-300 rounded-lg" />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Barcode</label>
-              <input type="text" name="barcode" value={formData.barcode} onChange={(e) => setFormData({...formData, barcode: e.target.value})} className="w-full px-4 py-2 border border-gray-300 rounded-lg" />
+              <input type="text" value={formData.barcode} onChange={(e) => setFormData({...formData, barcode: e.target.value})} className="w-full px-4 py-2 border border-gray-300 rounded-lg" />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Price *</label>
-              <input type="number" step="0.01" name="price" value={formData.price} onChange={(e) => setFormData({...formData, price: e.target.value})} required className="w-full px-4 py-2 border border-gray-300 rounded-lg" />
+              <input type="number" step="0.01" value={formData.price} onChange={(e) => setFormData({...formData, price: e.target.value})} required className="w-full px-4 py-2 border border-gray-300 rounded-lg" />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Stock Quantity</label>
-              <input type="number" name="stockQuantity" value={formData.stockQuantity} onChange={(e) => setFormData({...formData, stockQuantity: e.target.value})} className="w-full px-4 py-2 border border-gray-300 rounded-lg" />
+              <input type="number" value={formData.stockQuantity} onChange={(e) => setFormData({...formData, stockQuantity: parseInt(e.target.value) || 0})} className="w-full px-4 py-2 border border-gray-300 rounded-lg" />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Brand</label>
-              <input type="text" name="brand" value={formData.brand} onChange={(e) => setFormData({...formData, brand: e.target.value})} className="w-full px-4 py-2 border border-gray-300 rounded-lg" />
+              <input type="text" value={formData.brand} onChange={(e) => setFormData({...formData, brand: e.target.value})} className="w-full px-4 py-2 border border-gray-300 rounded-lg" />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
-              <input type="text" name="category" value={formData.category} onChange={(e) => setFormData({...formData, category: e.target.value})} className="w-full px-4 py-2 border border-gray-300 rounded-lg" />
+              <input type="text" value={formData.category} onChange={(e) => setFormData({...formData, category: e.target.value})} className="w-full px-4 py-2 border border-gray-300 rounded-lg" />
             </div>
           </div>
+
+          {/* Restock Section */}
+          <div className="border-t pt-4 mt-4">
+            <h3 className="font-semibold text-gray-700 mb-3 flex items-center gap-2">
+              <Clock size={18} />
+              Restock Information
+            </h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Expected Restock Date</label>
+                <input 
+                  type="date" 
+                  value={formData.restockDate} 
+                  onChange={(e) => setFormData({...formData, restockDate: e.target.value})} 
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg" 
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Restock Quantity</label>
+                <input 
+                  type="number" 
+                  value={formData.restockQuantity} 
+                  onChange={(e) => setFormData({...formData, restockQuantity: parseInt(e.target.value) || 0})} 
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg" 
+                  placeholder="Expected units"
+                />
+              </div>
+            </div>
+          </div>
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Picture URL</label>
-            <input type="url" name="pictureUrl" value={formData.pictureUrl} onChange={(e) => setFormData({...formData, pictureUrl: e.target.value})} className="w-full px-4 py-2 border border-gray-300 rounded-lg" />
+            <input type="url" value={formData.pictureUrl} onChange={(e) => setFormData({...formData, pictureUrl: e.target.value})} className="w-full px-4 py-2 border border-gray-300 rounded-lg" />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
-            <textarea name="description" value={formData.description} onChange={(e) => setFormData({...formData, description: e.target.value})} rows="3" className="w-full px-4 py-2 border border-gray-300 rounded-lg" />
+            <textarea value={formData.description} onChange={(e) => setFormData({...formData, description: e.target.value})} rows="3" className="w-full px-4 py-2 border border-gray-300 rounded-lg" />
           </div>
           <div className="flex gap-3 pt-4">
             <button type="submit" disabled={loading} className="flex-1 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50">
@@ -507,15 +540,10 @@ const ImportModal = ({ onClose, onImport }) => {
                   {product.pictureUrl && <img src={product.pictureUrl} alt={product.name} className="w-full h-24 object-contain mb-2" />}
                   <h4 className="font-medium text-sm truncate">{product.name}</h4>
                   <p className="text-xs text-gray-500 truncate">{product.brand}</p>
-                  <p className="text-xs text-gray-400 mt-1">{product.barcode}</p>
                 </div>
               ))}
             </div>
           </>
-        )}
-
-        {searchResults.length === 0 && !loading && searchQuery && (
-          <div className="text-center py-10 text-gray-500">No products found. Try a different search term.</div>
         )}
       </div>
     </div>
