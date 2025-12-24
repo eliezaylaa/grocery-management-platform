@@ -3,76 +3,28 @@ const router = express.Router();
 const productController = require("../controllers/product.controller");
 const { verifyToken, isManager } = require("../middleware/auth.middleware");
 
-/**
- * @swagger
- * /api/products/search/openfoodfacts:
- *   get:
- *     summary: Search products in Open Food Facts API
- *     tags: [Products]
- */
-router.get("/search/openfoodfacts", verifyToken, isManager, productController.searchOpenFoodFacts);
+// Search Open Food Facts - any authenticated user can search
+router.get("/search/openfoodfacts", verifyToken, productController.searchOpenFoodFacts);
 
-/**
- * @swagger
- * /api/products/import/bulk:
- *   post:
- *     summary: Bulk import products from Open Food Facts
- *     tags: [Products]
- */
+// Bulk import - managers only
 router.post("/import/bulk", verifyToken, isManager, productController.bulkImportFromOpenFoodFacts);
 
-/**
- * @swagger
- * /api/products:
- *   get:
- *     summary: Get all products
- *     tags: [Products]
- */
+// Get all products - any authenticated user
 router.get("/", verifyToken, productController.getAll);
 
-/**
- * @swagger
- * /api/products/{id}:
- *   get:
- *     summary: Get product by ID
- *     tags: [Products]
- */
+// Get product by ID - any authenticated user
 router.get("/:id", verifyToken, productController.getById);
 
-/**
- * @swagger
- * /api/products:
- *   post:
- *     summary: Create a new product
- *     tags: [Products]
- */
+// Create product - managers only
 router.post("/", verifyToken, isManager, productController.create);
 
-/**
- * @swagger
- * /api/products/sync/{barcode}:
- *   post:
- *     summary: Sync product with Open Food Facts
- *     tags: [Products]
- */
+// Sync with Open Food Facts - managers only
 router.post("/sync/:barcode", verifyToken, isManager, productController.syncWithOpenFoodFacts);
 
-/**
- * @swagger
- * /api/products/{id}:
- *   put:
- *     summary: Update a product
- *     tags: [Products]
- */
+// Update product - managers only
 router.put("/:id", verifyToken, isManager, productController.update);
 
-/**
- * @swagger
- * /api/products/{id}:
- *   delete:
- *     summary: Delete a product
- *     tags: [Products]
- */
+// Delete product - managers only
 router.delete("/:id", verifyToken, isManager, productController.delete);
 
 module.exports = router;
