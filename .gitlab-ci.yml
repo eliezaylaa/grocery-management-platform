@@ -1,6 +1,7 @@
 stages:
   - build
   - test
+  - deploy
 
 variables:
   NODE_VERSION: "18"
@@ -54,7 +55,7 @@ test:backend:
   script:
     - cd backend
     - npm ci
-    - echo "Backend build successful"
+    - echo "✅ Backend build successful"
 
 test:frontend:
   stage: test
@@ -62,4 +63,23 @@ test:frontend:
   script:
     - cd frontend
     - npm ci
-    - echo "Frontend build successful"
+    - echo "✅ Frontend build successful"
+
+# ==================== DEPLOY STAGE ====================
+deploy:production:
+  stage: deploy
+  image: alpine:latest
+  script:
+    - apk add --no-cache curl
+    - echo "🚀 Triggering Render deployment..."
+    - curl -X POST "$RENDER_DEPLOY_HOOK_BACKEND"
+    - echo "✅ Deployment triggered on Render!"
+  environment:
+    name: production
+    url: https://trinity-api.onrender.com
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+      when: manual
+  needs:
+    - test:backend
+    - test:frontend
