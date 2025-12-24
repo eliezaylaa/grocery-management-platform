@@ -1,70 +1,61 @@
 const { Sequelize } = require('sequelize');
-const config = require('../config/database');
+require('dotenv').config();
 
-const env = process.env.NODE_ENV || 'development';
-const dbConfig = config[env];
+let sequelize;
 
-const sequelize = new Sequelize(
-  dbConfig.database,
-  dbConfig.username,
-  dbConfig.password,
-  {
-    host: dbConfig.host,
-    port: dbConfig.port,
-    dialect: dbConfig.dialect,
-    logging: dbConfig.logging
-  }
-);
+// Check if DATABASE_URL exists (for Render/production)
+if (process.env.DATABASE_URL) {
+  sequelize = new Sequelize(process.env.DATABASE_URL, {
+    dialect: 'postgres',
+    logging: false,
+    dialectOptions: {
+      ssl: {
+        require: true,
+        rejectUnauthorized: false
+      }
+    }
+  });
+} else {
+  // Use individual variables (for local development)
+  sequelize = new Sequelize(
+    process.env.DB_NAME || 'trinity_db',
+    process.env.DB_USER || 'postgres',
+    process.env.DB_PASSWORD || 'postgres',
+    {
+      host: process.env.DB_HOST || 'localhost',
+      port: process.env.DB_PORT || 5432,
+      dialect: 'postgres',
+      logging: false,
+    }
+  );
+}
 
-const db = {
-  sequelize,
-  Sequelize,
-  User: require('./user.model')(sequelize),
-  Product: require('./product.model')(sequelize),
-  Invoice: require('./invoice.model')(sequelize),
-  InvoiceItem: require('./invoiceItem.model')(sequelize),
-  RefreshToken: require('./refreshToken.model')(sequelize)
-};
+// Import models
+const User = require('./user.model')(sequelize);
+const Product = require('./product.model')(sequelize);
+const Invoice = require('./invoice.model')(sequelize);
+const InvoiceItem = require('./invoiceItem.model')(sequelize);
+const RefreshToken = require('./refreshToken.model')(sequelize);
 
 // Associations
-db.User.hasMany(db.Invoice, {
-  foreignKey: 'user_id',
-  as: 'invoices'
-});
+User.hasMany(Invoice, { foreignKey: 'userId', as: 'invoices' });
+Invoice.belongsTo(User, { foreignKey: 'userId', as: 'user' });
 
-db.Invoice.belongsTo(db.User, {
-  foreignKey: 'user_id',
-  as: 'user'
-});
+Invoice.hasMany(InvoiceItem, { foreignKey: 'invoiceId', as: 'items' });
+InvoiceItem.belongsTo(Invoice, { foreignKey: 'invoiceId' });
 
-db.Invoice.hasMany(db.InvoiceItem, {
-  foreignKey: 'invoice_id',
-  as: 'items'
-});
+Product.hasMany(InvoiceItem, { foreignKey: 'productId' });
+InvoiceItem.belongsTo(Product, { foreignKey: 'productId', as: 'product' });
 
-db.InvoiceItem.belongsTo(db.Invoice, {
-  foreignKey: 'invoice_id',
-  as: 'invoice'
-});
+User.hasMany(RefreshToken, { foreignKey: 'userId' });
+RefreshToken.belongsTo(User, { foreignKey: 'userId' });
 
-db.Product.hasMany(db.InvoiceItem, {
-  foreignKey: 'product_id',
-  as: 'invoiceItems'
-});
-
-db.InvoiceItem.belongsTo(db.Product, {
-  foreignKey: 'product_id',
-  as: 'product'
-});
-
-db.User.hasMany(db.RefreshToken, {
-  foreignKey: 'user_id',
-  as: 'refreshTokens'
-});
-
-db.RefreshToken.belongsTo(db.User, {
-  foreignKey: 'user_id',
-  as: 'user'
-});
-
-module.exports = db;
+module.exports = {
+  sequelize,
+  Sequelize,
+  User,
+  Product,
+  Invoice,
+  InvoiceItem,
+  RefreshToken
+};
