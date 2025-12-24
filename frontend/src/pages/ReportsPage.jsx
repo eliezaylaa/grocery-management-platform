@@ -3,10 +3,10 @@ import { reportService } from '../services/reportService';
 import {
   DollarSign, TrendingUp, ShoppingCart, Users, Package,
   AlertTriangle, CreditCard, ArrowUp, ArrowDown, Calendar,
-  BarChart3, PieChart, Activity
+  BarChart3, PieChart as PieChartIcon, Activity
 } from 'lucide-react';
 import {
-  BarChart, Bar, LineChart, Line, PieChart as RechartsPie, Pie, Cell,
+  BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
   AreaChart, Area
 } from 'recharts';
@@ -70,7 +70,28 @@ export const ReportsPage = () => {
     );
   }
 
-  const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
+  const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
+
+  // Prepare pie chart data for order status
+  const orderStatusData = [
+    { name: 'Completed', value: kpis.orders?.completed || 0, color: '#10b981' },
+    { name: 'Pending', value: kpis.orders?.pending || 0, color: '#f59e0b' },
+    { name: 'Failed', value: kpis.orders?.failed || 0, color: '#ef4444' }
+  ].filter(item => item.value > 0);
+
+  // Custom label for pie chart
+  const renderCustomLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent, name }) => {
+    const RADIAN = Math.PI / 180;
+    const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+    const x = cx + radius * Math.cos(-midAngle * RADIAN);
+    const y = cy + radius * Math.sin(-midAngle * RADIAN);
+
+    return percent > 0.05 ? (
+      <text x={x} y={y} fill="white" textAnchor="middle" dominantBaseline="central" fontSize={12} fontWeight="bold">
+        {`${(percent * 100).toFixed(0)}%`}
+      </text>
+    ) : null;
+  };
 
   return (
     <div className="space-y-8">
@@ -175,7 +196,7 @@ export const ReportsPage = () => {
         </div>
       </div>
 
-      {/* Charts */}
+      {/* Charts Row 1 */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Daily Sales Trend */}
         <div className="bg-white p-6 rounded-xl shadow-md">
@@ -220,7 +241,7 @@ export const ReportsPage = () => {
                 <YAxis />
                 <Tooltip />
                 <Legend />
-                <Bar dataKey="orders" fill="#10b981" name="Orders" />
+                <Bar dataKey="orders" fill="#10b981" name="Orders" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           ) : (
@@ -231,10 +252,157 @@ export const ReportsPage = () => {
         </div>
       </div>
 
-      {/* More Charts */}
+      {/* Charts Row 2 - Pie Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Payment Methods Pie Chart */}
+        <div className="bg-white p-6 rounded-xl shadow-md">
+          <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+            <CreditCard size={20} className="text-blue-600" />
+            Payment Methods
+          </h2>
+          {kpis.paymentDistribution && kpis.paymentDistribution.length > 0 ? (
+            <>
+              <ResponsiveContainer width="100%" height={250}>
+                <PieChart>
+                  <Pie
+                    data={kpis.paymentDistribution}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={50}
+                    outerRadius={80}
+                    paddingAngle={5}
+                    dataKey="count"
+                    labelLine={false}
+                    label={renderCustomLabel}
+                  >
+                    {kpis.paymentDistribution.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip formatter={(value) => [value, 'Orders']} />
+                </PieChart>
+              </ResponsiveContainer>
+              <div className="flex flex-wrap justify-center gap-4 mt-4">
+                {kpis.paymentDistribution.map((entry, index) => (
+                  <div key={entry.method} className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[index % COLORS.length] }}></div>
+                    <span className="text-sm text-gray-600 capitalize">{entry.method}</span>
+                    <span className="text-sm font-semibold">({entry.count})</span>
+                  </div>
+                ))}
+              </div>
+            </>
+          ) : (
+            <div className="h-64 flex items-center justify-center text-gray-500">
+              <div className="text-center">
+                <PieChartIcon size={48} className="mx-auto text-gray-300 mb-2" />
+                <p>No payment data available</p>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Order Status Pie Chart */}
+        <div className="bg-white p-6 rounded-xl shadow-md">
+          <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+            <PieChartIcon size={20} className="text-purple-600" />
+            Order Status
+          </h2>
+          {orderStatusData.length > 0 ? (
+            <>
+              <ResponsiveContainer width="100%" height={250}>
+                <PieChart>
+                  <Pie
+                    data={orderStatusData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={50}
+                    outerRadius={80}
+                    paddingAngle={5}
+                    dataKey="value"
+                    labelLine={false}
+                    label={renderCustomLabel}
+                  >
+                    {orderStatusData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip formatter={(value) => [value, 'Orders']} />
+                </PieChart>
+              </ResponsiveContainer>
+              <div className="flex flex-wrap justify-center gap-4 mt-4">
+                {orderStatusData.map((entry) => (
+                  <div key={entry.name} className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: entry.color }}></div>
+                    <span className="text-sm text-gray-600">{entry.name}</span>
+                    <span className="text-sm font-semibold">({entry.value})</span>
+                  </div>
+                ))}
+              </div>
+            </>
+          ) : (
+            <div className="h-64 flex items-center justify-center text-gray-500">
+              <div className="text-center">
+                <PieChartIcon size={48} className="mx-auto text-gray-300 mb-2" />
+                <p>No order data available</p>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Revenue by Payment Method Pie Chart */}
+        <div className="bg-white p-6 rounded-xl shadow-md">
+          <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+            <DollarSign size={20} className="text-green-600" />
+            Revenue by Payment
+          </h2>
+          {kpis.paymentDistribution && kpis.paymentDistribution.length > 0 ? (
+            <>
+              <ResponsiveContainer width="100%" height={250}>
+                <PieChart>
+                  <Pie
+                    data={kpis.paymentDistribution.map(p => ({ ...p, total: parseFloat(p.total) }))}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={50}
+                    outerRadius={80}
+                    paddingAngle={5}
+                    dataKey="total"
+                    labelLine={false}
+                    label={renderCustomLabel}
+                  >
+                    {kpis.paymentDistribution.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip formatter={(value) => [`$${parseFloat(value).toFixed(2)}`, 'Revenue']} />
+                </PieChart>
+              </ResponsiveContainer>
+              <div className="flex flex-wrap justify-center gap-4 mt-4">
+                {kpis.paymentDistribution.map((entry, index) => (
+                  <div key={entry.method} className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[index % COLORS.length] }}></div>
+                    <span className="text-sm text-gray-600 capitalize">{entry.method}</span>
+                    <span className="text-sm font-semibold">(${entry.total})</span>
+                  </div>
+                ))}
+              </div>
+            </>
+          ) : (
+            <div className="h-64 flex items-center justify-center text-gray-500">
+              <div className="text-center">
+                <PieChartIcon size={48} className="mx-auto text-gray-300 mb-2" />
+                <p>No revenue data available</p>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Top Products & Low Stock */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Top Products */}
-        <div className="bg-white p-6 rounded-xl shadow-md lg:col-span-2">
+        <div className="bg-white p-6 rounded-xl shadow-md">
           <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
             <Package size={20} className="text-purple-600" />
             Top Selling Products
@@ -248,84 +416,17 @@ export const ReportsPage = () => {
                 <Tooltip 
                   formatter={(value, name) => [value, name === 'quantitySold' ? 'Units Sold' : name]}
                 />
-                <Bar dataKey="quantitySold" fill="#8b5cf6" name="Units Sold" />
+                <Bar dataKey="quantitySold" fill="#8b5cf6" name="Units Sold" radius={[0, 4, 4, 0]} />
               </BarChart>
             </ResponsiveContainer>
           ) : (
             <div className="h-64 flex items-center justify-center text-gray-500">
-              No product data available
+              <div className="text-center">
+                <Package size={48} className="mx-auto text-gray-300 mb-2" />
+                <p>No product data available</p>
+              </div>
             </div>
           )}
-        </div>
-
-        {/* Payment Methods */}
-        <div className="bg-white p-6 rounded-xl shadow-md">
-          <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-            <CreditCard size={20} className="text-blue-600" />
-            Payment Methods
-          </h2>
-          {kpis.paymentDistribution && kpis.paymentDistribution.length > 0 ? (
-            <ResponsiveContainer width="100%" height={300}>
-              <RechartsPie>
-                <Pie
-                  data={kpis.paymentDistribution}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={60}
-                  outerRadius={100}
-                  paddingAngle={5}
-                  dataKey="count"
-                  label={(entry) => entry.method}
-                >
-                  {kpis.paymentDistribution.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip formatter={(value) => [value, 'Orders']} />
-              </RechartsPie>
-            </ResponsiveContainer>
-          ) : (
-            <div className="h-64 flex items-center justify-center text-gray-500">
-              No payment data available
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Order Status & Low Stock */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Order Status */}
-        <div className="bg-white p-6 rounded-xl shadow-md">
-          <h2 className="text-xl font-semibold mb-4">Order Status Overview</h2>
-          <div className="space-y-4">
-            <div className="flex items-center justify-between p-4 bg-green-50 rounded-lg">
-              <div className="flex items-center gap-3">
-                <div className="bg-green-100 p-2 rounded-full">
-                  <ShoppingCart size={20} className="text-green-600" />
-                </div>
-                <span className="font-medium text-gray-700">Completed Orders</span>
-              </div>
-              <span className="text-2xl font-bold text-green-600">{kpis.orders?.completed || 0}</span>
-            </div>
-            <div className="flex items-center justify-between p-4 bg-yellow-50 rounded-lg">
-              <div className="flex items-center gap-3">
-                <div className="bg-yellow-100 p-2 rounded-full">
-                  <Calendar size={20} className="text-yellow-600" />
-                </div>
-                <span className="font-medium text-gray-700">Pending Orders</span>
-              </div>
-              <span className="text-2xl font-bold text-yellow-600">{kpis.orders?.pending || 0}</span>
-            </div>
-            <div className="flex items-center justify-between p-4 bg-red-50 rounded-lg">
-              <div className="flex items-center gap-3">
-                <div className="bg-red-100 p-2 rounded-full">
-                  <AlertTriangle size={20} className="text-red-600" />
-                </div>
-                <span className="font-medium text-gray-700">Failed Orders</span>
-              </div>
-              <span className="text-2xl font-bold text-red-600">{kpis.orders?.failed || 0}</span>
-            </div>
-          </div>
         </div>
 
         {/* Low Stock Alert */}
@@ -335,7 +436,7 @@ export const ReportsPage = () => {
             Low Stock Products
           </h2>
           {kpis.lowStock && kpis.lowStock.length > 0 ? (
-            <div className="space-y-3 max-h-80 overflow-y-auto">
+            <div className="space-y-3 max-h-72 overflow-y-auto">
               {kpis.lowStock.map((product) => (
                 <div key={product.id} className="flex items-center justify-between p-3 bg-orange-50 rounded-lg border border-orange-200">
                   <div className="flex items-center gap-3">
@@ -351,7 +452,7 @@ export const ReportsPage = () => {
                       <p className="text-xs text-gray-500">{product.brand}</p>
                     </div>
                   </div>
-                  <span className={`font-bold ${product.stockQuantity === 0 ? 'text-red-600' : 'text-orange-600'}`}>
+                  <span className={`font-bold text-sm ${product.stockQuantity === 0 ? 'text-red-600' : 'text-orange-600'}`}>
                     {product.stockQuantity === 0 ? 'Out of Stock' : `${product.stockQuantity} left`}
                   </span>
                 </div>
@@ -370,13 +471,25 @@ export const ReportsPage = () => {
       <div className="bg-white p-6 rounded-xl shadow-md">
         <h2 className="text-xl font-semibold mb-4">Weekly Revenue Comparison</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="text-center p-6 bg-blue-50 rounded-lg">
-            <p className="text-gray-600">This Week</p>
+          <div className="text-center p-6 bg-blue-50 rounded-lg border-2 border-blue-200">
+            <p className="text-gray-600 font-medium">This Week</p>
             <p className="text-4xl font-bold text-blue-600 mt-2">${kpis.salesGrowth?.thisWeek || '0'}</p>
+            <p className="text-sm text-gray-500 mt-2">Current period</p>
           </div>
-          <div className="text-center p-6 bg-gray-50 rounded-lg">
-            <p className="text-gray-600">Last Week</p>
+          <div className="text-center p-6 bg-gray-50 rounded-lg border-2 border-gray-200">
+            <p className="text-gray-600 font-medium">Last Week</p>
             <p className="text-4xl font-bold text-gray-600 mt-2">${kpis.salesGrowth?.lastWeek || '0'}</p>
+            <p className="text-sm text-gray-500 mt-2">Previous period</p>
+          </div>
+        </div>
+        <div className="mt-6 text-center">
+          <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full ${
+            parseFloat(kpis.salesGrowth?.growthRate || 0) >= 0 
+              ? 'bg-green-100 text-green-700' 
+              : 'bg-red-100 text-red-700'
+          }`}>
+            {parseFloat(kpis.salesGrowth?.growthRate || 0) >= 0 ? <ArrowUp size={18} /> : <ArrowDown size={18} />}
+            <span className="font-semibold">{Math.abs(parseFloat(kpis.salesGrowth?.growthRate || 0))}% {parseFloat(kpis.salesGrowth?.growthRate || 0) >= 0 ? 'Growth' : 'Decline'}</span>
           </div>
         </div>
       </div>
