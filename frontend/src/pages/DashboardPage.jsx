@@ -7,11 +7,11 @@ import { productService } from '../services/productService';
 import { 
   ShoppingCart, AlertTriangle, DollarSign, TrendingUp, Package, 
   ShoppingBag, Clock, CheckCircle, CreditCard, ArrowRight, Star,
-  Clipboard, BoxIcon, Users, RefreshCw, Eye, Truck
+  Clipboard, BoxIcon, Users, Eye, Truck, Activity, BarChart3, PieChart
 } from 'lucide-react';
 import {
-  BarChart, Bar, PieChart, Pie, Cell,
-  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
+  BarChart, Bar, LineChart, Line, PieChart as RechartsPie, Pie, Cell,
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Area, AreaChart
 } from 'recharts';
 
 // ==================== MANAGER/ADMIN DASHBOARD ====================
@@ -43,7 +43,7 @@ const ManagerDashboard = () => {
     return <div className="text-center py-20">Failed to load dashboard data</div>;
   }
 
-  const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444'];
+  const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
 
   return (
     <div className="space-y-8">
@@ -52,49 +52,129 @@ const ManagerDashboard = () => {
         <p className="text-gray-600 mt-2">Welcome back! Here's your store overview.</p>
       </div>
 
-      {/* KPI Cards */}
+      {/* Main KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard
-          title="Total Revenue"
-          value={`$${kpis.totalRevenue?.value || '0'}`}
-          change={parseFloat(kpis.totalRevenue?.change || 0)}
-          icon={DollarSign}
-          color="bg-blue-500"
-        />
-        <StatCard
-          title="Avg Transaction"
-          value={`$${kpis.averageTransaction?.value || '0'}`}
-          icon={ShoppingCart}
-          color="bg-green-500"
-        />
-        <StatCard
-          title="Sales Growth"
-          value={`${kpis.salesGrowth?.growthRate || '0'}%`}
-          icon={TrendingUp}
-          color="bg-purple-500"
-        />
-        <StatCard
-          title="Low Stock Items"
-          value={kpis.lowStock?.length || 0}
-          icon={AlertTriangle}
-          color="bg-red-500"
-          onClick={() => navigate('/products?lowStock=true')}
-        />
+        <div className="bg-white p-6 rounded-xl shadow-md border-l-4 border-blue-500">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-500">Total Revenue</p>
+              <p className="text-2xl font-bold mt-1">${kpis.totalRevenue?.value || '0'}</p>
+              <p className={`text-sm mt-1 ${parseFloat(kpis.totalRevenue?.change) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                {parseFloat(kpis.totalRevenue?.change) >= 0 ? '+' : ''}{kpis.totalRevenue?.change || 0}% vs last month
+              </p>
+            </div>
+            <div className="bg-blue-100 p-3 rounded-full">
+              <DollarSign size={24} className="text-blue-600" />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white p-6 rounded-xl shadow-md border-l-4 border-green-500">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-500">Avg Transaction</p>
+              <p className="text-2xl font-bold mt-1">${kpis.averageTransaction?.value || '0'}</p>
+              <p className="text-sm text-gray-500 mt-1">Per order</p>
+            </div>
+            <div className="bg-green-100 p-3 rounded-full">
+              <ShoppingCart size={24} className="text-green-600" />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white p-6 rounded-xl shadow-md border-l-4 border-purple-500">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-500">Sales Growth</p>
+              <p className="text-2xl font-bold mt-1">{kpis.salesGrowth?.growthRate || '0'}%</p>
+              <p className="text-sm text-gray-500 mt-1">vs last week</p>
+            </div>
+            <div className="bg-purple-100 p-3 rounded-full">
+              <TrendingUp size={24} className="text-purple-600" />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white p-6 rounded-xl shadow-md border-l-4 border-orange-500 cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate('/products?lowStock=true')}>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-500">Low Stock Items</p>
+              <p className="text-2xl font-bold mt-1">{kpis.lowStock?.length || 0}</p>
+              <p className="text-sm text-orange-600 mt-1">Need attention</p>
+            </div>
+            <div className="bg-orange-100 p-3 rounded-full">
+              <AlertTriangle size={24} className="text-orange-600" />
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* Charts */}
+      {/* Secondary Stats Row */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="bg-gradient-to-r from-blue-500 to-blue-600 p-6 rounded-xl text-white">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-blue-100 text-sm">Last 24 Hours</p>
+              <p className="text-3xl font-bold mt-1">${kpis.last24Hours?.revenue || '0'}</p>
+              <p className="text-blue-100 text-sm mt-1">{kpis.last24Hours?.orders || 0} orders</p>
+            </div>
+            <Activity size={32} className="text-blue-200" />
+          </div>
+        </div>
+
+        <div className="bg-gradient-to-r from-green-500 to-green-600 p-6 rounded-xl text-white">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-green-100 text-sm">Avg Purchase (24h)</p>
+              <p className="text-3xl font-bold mt-1">${kpis.last24Hours?.averagePurchase || '0'}</p>
+              <p className="text-green-100 text-sm mt-1">Per customer</p>
+            </div>
+            <BarChart3 size={32} className="text-green-200" />
+          </div>
+        </div>
+
+        <div className="bg-gradient-to-r from-purple-500 to-purple-600 p-6 rounded-xl text-white">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-purple-100 text-sm">Median Payment</p>
+              <p className="text-3xl font-bold mt-1">${kpis.medianPayment || '0'}</p>
+              <p className="text-purple-100 text-sm mt-1">All time</p>
+            </div>
+            <PieChart size={32} className="text-purple-200" />
+          </div>
+        </div>
+
+        <div className="bg-gradient-to-r from-orange-500 to-orange-600 p-6 rounded-xl text-white">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-orange-100 text-sm">Customers</p>
+              <p className="text-3xl font-bold mt-1">{kpis.customers?.total || 0}</p>
+              <p className="text-orange-100 text-sm mt-1">+{kpis.customers?.newThisMonth || 0} this month</p>
+            </div>
+            <Users size={32} className="text-orange-200" />
+          </div>
+        </div>
+      </div>
+
+      {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white p-6 rounded-lg shadow-md">
-          <h2 className="text-xl font-semibold mb-4">Top Selling Products</h2>
-          {kpis.topProducts && kpis.topProducts.length > 0 ? (
+        {/* Daily Sales Trend */}
+        <div className="bg-white p-6 rounded-xl shadow-md">
+          <h2 className="text-xl font-semibold mb-4">Sales Trend (Last 7 Days)</h2>
+          {kpis.dailySales && kpis.dailySales.length > 0 ? (
             <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={kpis.topProducts.slice(0, 5)}>
+              <AreaChart data={kpis.dailySales}>
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+                <XAxis dataKey="dayName" />
                 <YAxis />
-                <Tooltip />
-                <Bar dataKey="quantitySold" fill="#3b82f6" />
-              </BarChart>
+                <Tooltip 
+                  formatter={(value, name) => [
+                    name === 'revenue' ? `$${value}` : value,
+                    name === 'revenue' ? 'Revenue' : 'Orders'
+                  ]}
+                />
+                <Area type="monotone" dataKey="revenue" stroke="#3b82f6" fill="#93c5fd" name="revenue" />
+              </AreaChart>
             </ResponsiveContainer>
           ) : (
             <div className="h-64 flex items-center justify-center text-gray-500">
@@ -103,27 +183,51 @@ const ManagerDashboard = () => {
           )}
         </div>
 
-        <div className="bg-white p-6 rounded-lg shadow-md">
+        {/* Top Products */}
+        <div className="bg-white p-6 rounded-xl shadow-md">
+          <h2 className="text-xl font-semibold mb-4">Top Selling Products</h2>
+          {kpis.topProducts && kpis.topProducts.length > 0 ? (
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={kpis.topProducts.slice(0, 5)} layout="vertical">
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis type="number" />
+                <YAxis dataKey="name" type="category" width={100} tick={{ fontSize: 12 }} />
+                <Tooltip />
+                <Bar dataKey="quantitySold" fill="#10b981" name="Units Sold" />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="h-64 flex items-center justify-center text-gray-500">
+              No sales data yet
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* More Charts */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Payment Distribution */}
+        <div className="bg-white p-6 rounded-xl shadow-md">
           <h2 className="text-xl font-semibold mb-4">Payment Methods</h2>
           {kpis.paymentDistribution && kpis.paymentDistribution.length > 0 ? (
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
+            <ResponsiveContainer width="100%" height={250}>
+              <RechartsPie>
                 <Pie
                   data={kpis.paymentDistribution}
                   cx="50%"
                   cy="50%"
-                  labelLine={false}
-                  label={(entry) => entry.method}
+                  innerRadius={60}
                   outerRadius={80}
-                  fill="#8884d8"
+                  paddingAngle={5}
                   dataKey="count"
+                  label={(entry) => entry.method}
                 >
                   {kpis.paymentDistribution.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
                 <Tooltip />
-              </PieChart>
+              </RechartsPie>
             </ResponsiveContainer>
           ) : (
             <div className="h-64 flex items-center justify-center text-gray-500">
@@ -131,11 +235,52 @@ const ManagerDashboard = () => {
             </div>
           )}
         </div>
+
+        {/* Order Status */}
+        <div className="bg-white p-6 rounded-xl shadow-md">
+          <h2 className="text-xl font-semibold mb-4">Order Status</h2>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+              <div className="flex items-center gap-3">
+                <CheckCircle className="text-green-600" size={24} />
+                <span className="font-medium">Completed</span>
+              </div>
+              <span className="text-2xl font-bold text-green-600">{kpis.orders?.completed || 0}</span>
+            </div>
+            <div className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg">
+              <div className="flex items-center gap-3">
+                <Clock className="text-yellow-600" size={24} />
+                <span className="font-medium">Pending</span>
+              </div>
+              <span className="text-2xl font-bold text-yellow-600">{kpis.orders?.pending || 0}</span>
+            </div>
+            <div className="flex items-center justify-between p-3 bg-red-50 rounded-lg">
+              <div className="flex items-center gap-3">
+                <AlertTriangle className="text-red-600" size={24} />
+                <span className="font-medium">Failed</span>
+              </div>
+              <span className="text-2xl font-bold text-red-600">{kpis.orders?.failed || 0}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Today's Stats */}
+        <div className="bg-white p-6 rounded-xl shadow-md">
+          <h2 className="text-xl font-semibold mb-4">Today's Performance</h2>
+          <div className="text-center py-4">
+            <p className="text-5xl font-bold text-blue-600">${kpis.today?.revenue || '0'}</p>
+            <p className="text-gray-500 mt-2">Revenue Today</p>
+            <div className="mt-4 pt-4 border-t">
+              <p className="text-3xl font-bold text-gray-800">{kpis.today?.orders || 0}</p>
+              <p className="text-gray-500">Orders Today</p>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Low Stock Alert */}
       {kpis.lowStock && kpis.lowStock.length > 0 && (
-        <div className="bg-white p-6 rounded-lg shadow-md">
+        <div className="bg-white p-6 rounded-xl shadow-md">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-semibold flex items-center gap-2">
               <AlertTriangle className="text-red-500" />
@@ -143,9 +288,9 @@ const ManagerDashboard = () => {
             </h2>
             <button
               onClick={() => navigate('/products?lowStock=true')}
-              className="text-blue-600 hover:text-blue-800 text-sm"
+              className="text-blue-600 hover:text-blue-800 text-sm flex items-center gap-1"
             >
-              View All →
+              View All <ArrowRight size={16} />
             </button>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -322,99 +467,6 @@ const EmployeeDashboard = () => {
         </button>
       </div>
 
-      {/* Pending Orders Section */}
-      {pendingOrders.length > 0 && (
-        <div className="bg-orange-50 border border-orange-200 rounded-xl p-6">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <Clock className="text-orange-600" size={24} />
-              <h2 className="text-xl font-semibold text-orange-800">Orders Pending Approval</h2>
-            </div>
-            <button
-              onClick={() => navigate('/invoices?status=pending')}
-              className="text-orange-600 hover:text-orange-800 text-sm font-medium flex items-center gap-1"
-            >
-              View All <ArrowRight size={16} />
-            </button>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {pendingOrders.slice(0, 6).map(order => (
-              <div key={order.id} className="bg-white p-4 rounded-lg shadow-sm">
-                <div className="flex items-center justify-between mb-2">
-                  <p className="font-semibold">{order.invoiceNumber}</p>
-                  <span className="text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded-full">
-                    {order.paymentMethod}
-                  </span>
-                </div>
-                <p className="text-sm text-gray-600">
-                  {order.user?.firstName} {order.user?.lastName || order.user?.email}
-                </p>
-                <div className="flex items-center justify-between mt-3">
-                  <p className="font-bold text-lg">${parseFloat(order.totalAmount).toFixed(2)}</p>
-                  <button
-                    onClick={() => navigate('/invoices')}
-                    className="text-blue-600 hover:text-blue-800"
-                  >
-                    <Eye size={18} />
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Low Stock Alert */}
-      {lowStockProducts.length > 0 && (
-        <div className="bg-white rounded-xl shadow-md p-6">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-semibold flex items-center gap-2">
-              <AlertTriangle className="text-yellow-500" />
-              Low Stock Alert
-            </h2>
-            <button
-              onClick={() => navigate('/products?lowStock=true')}
-              className="text-blue-600 hover:text-blue-800 text-sm font-medium flex items-center gap-1"
-            >
-              View All <ArrowRight size={16} />
-            </button>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {lowStockProducts.slice(0, 8).map(product => (
-              <div 
-                key={product.id} 
-                className={`border rounded-lg p-4 ${
-                  product.stockQuantity === 0 ? 'border-red-300 bg-red-50' : 'border-yellow-300 bg-yellow-50'
-                }`}
-              >
-                {product.pictureUrl ? (
-                  <img src={product.pictureUrl} alt={product.name} className="w-full h-20 object-cover rounded mb-2" />
-                ) : (
-                  <div className="w-full h-20 bg-gray-200 rounded mb-2 flex items-center justify-center">
-                    <Package size={24} className="text-gray-400" />
-                  </div>
-                )}
-                <h3 className="font-medium text-sm truncate">{product.name}</h3>
-                <p className="text-xs text-gray-500 truncate">{product.brand}</p>
-                <div className="flex items-center justify-between mt-2">
-                  <span className={`text-sm font-bold ${
-                    product.stockQuantity === 0 ? 'text-red-600' : 'text-yellow-600'
-                  }`}>
-                    {product.stockQuantity === 0 ? 'Out of Stock' : `${product.stockQuantity} left`}
-                  </span>
-                  {product.restockDate && (
-                    <span className="text-xs text-gray-500 flex items-center gap-1">
-                      <Truck size={12} />
-                      {new Date(product.restockDate).toLocaleDateString()}
-                    </span>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
       {/* Recent Orders */}
       <div className="bg-white rounded-xl shadow-md p-6">
         <div className="flex items-center justify-between mb-6">
@@ -437,7 +489,6 @@ const EmployeeDashboard = () => {
                   <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Items</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Total</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Status</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Time</th>
                 </tr>
               </thead>
               <tbody>
@@ -457,12 +508,6 @@ const EmployeeDashboard = () => {
                       }`}>
                         {order.paymentStatus}
                       </span>
-                    </td>
-                    <td className="py-3 px-4 text-gray-500 text-sm">
-                      {new Date(order.createdAt).toLocaleTimeString('en-US', {
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      })}
                     </td>
                   </tr>
                 ))}
@@ -508,10 +553,6 @@ const CustomerDashboard = () => {
 
   const pendingOrders = orders.filter(o => o.paymentStatus === 'pending');
   const completedOrders = orders.filter(o => o.paymentStatus === 'completed');
-
-  const recentProducts = orders
-    .flatMap(o => o.items || [])
-    .slice(0, 4);
 
   if (loading) {
     return <div className="text-center py-20">Loading your dashboard...</div>;
@@ -615,50 +656,14 @@ const CustomerDashboard = () => {
         </button>
       </div>
 
-      {/* Pending Orders Alert */}
-      {pendingOrders.length > 0 && (
-        <div className="bg-orange-50 border border-orange-200 rounded-xl p-6">
-          <div className="flex items-center gap-3 mb-4">
-            <Clock className="text-orange-600" size={24} />
-            <h2 className="text-xl font-semibold text-orange-800">Pending Orders</h2>
-          </div>
-          <div className="space-y-3">
-            {pendingOrders.slice(0, 3).map(order => (
-              <div key={order.id} className="bg-white p-4 rounded-lg flex items-center justify-between">
-                <div>
-                  <p className="font-medium">{order.invoiceNumber}</p>
-                  <p className="text-sm text-gray-500">
-                    {new Date(order.createdAt).toLocaleDateString()} • {order.items?.length || 0} items
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className="font-bold text-lg">${parseFloat(order.totalAmount).toFixed(2)}</p>
-                  <span className="text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded-full">
-                    Awaiting Approval
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
       {/* Recent Orders */}
       <div className="bg-white rounded-xl shadow-md p-6">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-semibold">Recent Orders</h2>
-          <button
-            onClick={() => navigate('/my-orders')}
-            className="text-blue-600 hover:text-blue-800 text-sm font-medium flex items-center gap-1"
-          >
-            View All <ArrowRight size={16} />
-          </button>
-        </div>
-
+        <h2 className="text-xl font-semibold mb-6">Recent Orders</h2>
+        
         {orders.length > 0 ? (
           <div className="space-y-4">
             {orders.slice(0, 5).map(order => (
-              <div key={order.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+              <div key={order.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                 <div className="flex items-center gap-4">
                   <div className={`p-2 rounded-full ${
                     order.paymentStatus === 'completed' ? 'bg-green-100' :
@@ -666,20 +671,14 @@ const CustomerDashboard = () => {
                   }`}>
                     {order.paymentStatus === 'completed' ? (
                       <CheckCircle size={20} className="text-green-600" />
-                    ) : order.paymentStatus === 'pending' ? (
-                      <Clock size={20} className="text-orange-600" />
                     ) : (
-                      <AlertTriangle size={20} className="text-red-600" />
+                      <Clock size={20} className="text-orange-600" />
                     )}
                   </div>
                   <div>
                     <p className="font-medium">{order.invoiceNumber}</p>
                     <p className="text-sm text-gray-500">
-                      {new Date(order.createdAt).toLocaleDateString('en-US', {
-                        month: 'short',
-                        day: 'numeric',
-                        year: 'numeric'
-                      })}
+                      {new Date(order.createdAt).toLocaleDateString()}
                     </p>
                   </div>
                 </div>
@@ -693,78 +692,24 @@ const CustomerDashboard = () => {
         ) : (
           <div className="text-center py-12">
             <ShoppingBag size={48} className="mx-auto text-gray-300 mb-4" />
-            <h3 className="text-lg font-medium text-gray-700">No orders yet</h3>
-            <p className="text-gray-500 mb-4">Start shopping to see your orders here</p>
+            <p className="text-gray-500">No orders yet</p>
             <button
               onClick={() => navigate('/shop')}
-              className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700"
+              className="mt-4 bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700"
             >
-              Browse Products
+              Start Shopping
             </button>
           </div>
         )}
       </div>
-
-      {/* Recently Purchased Products */}
-      {recentProducts.length > 0 && (
-        <div className="bg-white rounded-xl shadow-md p-6">
-          <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
-            <Star className="text-yellow-500" />
-            Recently Purchased
-          </h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {recentProducts.map((item, index) => (
-              <div key={index} className="border rounded-lg p-3 hover:shadow-md transition-shadow">
-                {item.product?.pictureUrl ? (
-                  <img 
-                    src={item.product.pictureUrl} 
-                    alt={item.product?.name} 
-                    className="w-full h-24 object-cover rounded mb-2"
-                  />
-                ) : (
-                  <div className="w-full h-24 bg-gray-100 rounded mb-2 flex items-center justify-center">
-                    <Package size={24} className="text-gray-400" />
-                  </div>
-                )}
-                <p className="font-medium text-sm truncate">{item.product?.name || 'Product'}</p>
-                <p className="text-xs text-gray-500">{item.product?.brand}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 };
-
-// ==================== STAT CARD COMPONENT ====================
-const StatCard = ({ title, value, change, icon: Icon, color, onClick }) => (
-  <div 
-    className={`bg-white p-6 rounded-lg shadow-md ${onClick ? 'cursor-pointer hover:shadow-lg transition-shadow' : ''}`}
-    onClick={onClick}
-  >
-    <div className="flex items-center justify-between">
-      <div>
-        <p className="text-sm text-gray-600">{title}</p>
-        <p className="text-2xl font-bold mt-2">{value}</p>
-        {change !== undefined && (
-          <p className={`text-sm mt-1 ${change >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-            {change >= 0 ? '+' : ''}{change}% from last period
-          </p>
-        )}
-      </div>
-      <div className={`p-3 rounded-full ${color}`}>
-        <Icon size={24} className="text-white" />
-      </div>
-    </div>
-  </div>
-);
 
 // ==================== MAIN DASHBOARD COMPONENT ====================
 export const DashboardPage = () => {
   const { user } = useAuth();
 
-  // Show appropriate dashboard based on role
   if (user?.role === 'customer') {
     return <CustomerDashboard />;
   }
@@ -773,6 +718,5 @@ export const DashboardPage = () => {
     return <EmployeeDashboard />;
   }
 
-  // Admin and Manager get the full dashboard
   return <ManagerDashboard />;
 };

@@ -1,24 +1,42 @@
 import React, { useState, useEffect } from 'react';
-import api from '../services/api';
-import { Plus, Edit, Trash2, Shield, User as UserIcon, X, Mail, Phone, MapPin, Calendar, ShoppingBag } from 'lucide-react';
+import { userService } from '../services/userService';
+import { 
+  Search, Plus, Edit, Trash2, X, User, Mail, Phone, MapPin, 
+  ShoppingBag, DollarSign, Calendar, Package, Eye
+} from 'lucide-react';
 
 export const UsersPage = () => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [roleFilter, setRoleFilter] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
-  const [editingUser, setEditingUser] = useState(null);
   const [selectedUser, setSelectedUser] = useState(null);
-  const [filterRole, setFilterRole] = useState('all');
+  const [userOrders, setUserOrders] = useState([]);
+  const [userStats, setUserStats] = useState(null);
+  const [loadingOrders, setLoadingOrders] = useState(false);
+  const [formData, setFormData] = useState({
+    email: '',
+    password: '',
+    role: 'customer',
+    firstName: '',
+    lastName: '',
+    phoneNumber: '',
+    address: '',
+    city: '',
+    zipCode: '',
+    country: ''
+  });
 
   useEffect(() => {
     loadUsers();
-  }, []);
+  }, [roleFilter]);
 
   const loadUsers = async () => {
-    setLoading(true);
     try {
-      const { data } = await api.get('/users');
+      setLoading(true);
+      const data = await userService.getAll({ role: roleFilter, search });
       setUsers(data.users || []);
     } catch (error) {
       console.error('Failed to load users:', error);
@@ -27,543 +45,522 @@ export const UsersPage = () => {
     }
   };
 
+  const handleSearch = (e) => {
+    e.preventDefault();
+    loadUsers();
+  };
+
+  const handleUserClick = async (user) => {
+    setSelectedUser(user);
+    setShowDetailModal(true);
+    setLoadingOrders(true);
+    
+    try {
+      // Fetch orders specific to this user
+      const data = await userService.getUserOrders(user.id);
+      setUserOrders(data.orders || []);
+      setUserStats(data.stats || null);
+    } catch (error) {
+      console.error('Failed to load user orders:', error);
+      setUserOrders([]);
+      setUserStats(null);
+    } finally {
+      setLoadingOrders(false);
+    }
+  };
+
+  const handleCreate = async (e) => {
+    e.preventDefault();
+    try {
+      await userService.create(formData);
+      setShowModal(false);
+      resetForm();
+      loadUsers();
+    } catch (error) {
+      alert('Failed to create user: ' + error.message);
+    }
+  };
+
+  const handleUpdate = async (e) => {
+    e.preventDefault();
+    try {
+      const updateData = { ...formData };
+      if (!updateData.password) delete updateData.password;
+      await userService.update(selectedUser.id, updateData);
+      setShowModal(false);
+      resetForm();
+      loadUsers();
+    } catch (error) {
+      alert('Failed to update user: ' + error.message);
+    }
+  };
+
   const handleDelete = async (id) => {
     if (window.confirm('Are you sure you want to delete this user?')) {
       try {
-        await api.delete(`/users/${id}`);
+        await userService.delete(id);
         loadUsers();
       } catch (error) {
-        alert('Failed to delete user');
+        alert('Failed to delete user: ' + error.message);
       }
     }
   };
 
-  const handleRowClick = (user) => {
+  const openEditModal = (user) => {
     setSelectedUser(user);
-    setShowDetailModal(true);
+    setFormData({
+      email: user.email,
+      password: '',
+      role: user.role,
+      firstName: user.firstName || '',
+      lastName: user.lastName || '',
+      phoneNumber: user.phoneNumber || '',
+      address: user.address || '',
+      city: user.city || '',
+      zipCode: user.zipCode || '',
+      country: user.country || ''
+    });
+    setShowModal(true);
   };
 
-  const getRoleBadge = (role) => {
-    const styles = {
-      admin: 'bg-red-100 text-red-800 border-red-200',
-      manager: 'bg-blue-100 text-blue-800 border-blue-200',
-      employee: 'bg-green-100 text-green-800 border-green-200',
-      customer: 'bg-purple-100 text-purple-800 border-purple-200'
-    };
-    return styles[role] || 'bg-gray-100 text-gray-800 border-gray-200';
+  const resetForm = () => {
+    setFormData({
+      email: '',
+      password: '',
+      role: 'customer',
+      firstName: '',
+      lastName: '',
+      phoneNumber: '',
+      address: '',
+      city: '',
+      zipCode: '',
+      country: ''
+    });
+    setSelectedUser(null);
   };
 
-  const getRoleIcon = (role) => {
-    if (role === 'admin' || role === 'manager') return <Shield size={20} />;
-    return <UserIcon size={20} />;
+  const getRoleBadgeColor = (role) => {
+    switch (role) {
+      case 'admin': return 'bg-red-100 text-red-800';
+      case 'manager': return 'bg-purple-100 text-purple-800';
+      case 'employee': return 'bg-blue-100 text-blue-800';
+      default: return 'bg-green-100 text-green-800';
+    }
   };
-
-  const filteredUsers = filterRole === 'all' 
-    ? users 
-    : users.filter(u => u.role === filterRole);
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">User Management</h1>
-          <p className="text-gray-600 mt-2">Manage all system users (staff & customers)</p>
-        </div>
+      <div className="flex justify-between items-center">
+        <h1 className="text-3xl font-bold text-gray-900">Users</h1>
         <button
-          onClick={() => {
-            setEditingUser(null);
-            setShowModal(true);
-          }}
-          className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+          onClick={() => { resetForm(); setShowModal(true); }}
+          className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-blue-700"
         >
           <Plus size={20} />
           Add User
         </button>
       </div>
 
-      {/* Filter by Role */}
-      <div className="flex flex-wrap gap-2">
-        <button
-          onClick={() => setFilterRole('all')}
-          className={`px-4 py-2 rounded-lg ${filterRole === 'all' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700'}`}
+      {/* Filters */}
+      <div className="bg-white p-4 rounded-lg shadow-md flex flex-wrap gap-4">
+        <form onSubmit={handleSearch} className="flex-1 min-w-64">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+            <input
+              type="text"
+              placeholder="Search by name or email..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+        </form>
+        
+        <select
+          value={roleFilter}
+          onChange={(e) => setRoleFilter(e.target.value)}
+          className="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
         >
-          All ({users.length})
-        </button>
-        <button
-          onClick={() => setFilterRole('admin')}
-          className={`px-4 py-2 rounded-lg ${filterRole === 'admin' ? 'bg-red-600 text-white' : 'bg-gray-100 text-gray-700'}`}
-        >
-          Admins ({users.filter(u => u.role === 'admin').length})
-        </button>
-        <button
-          onClick={() => setFilterRole('manager')}
-          className={`px-4 py-2 rounded-lg ${filterRole === 'manager' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700'}`}
-        >
-          Managers ({users.filter(u => u.role === 'manager').length})
-        </button>
-        <button
-          onClick={() => setFilterRole('employee')}
-          className={`px-4 py-2 rounded-lg ${filterRole === 'employee' ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-700'}`}
-        >
-          Employees ({users.filter(u => u.role === 'employee').length})
-        </button>
-        <button
-          onClick={() => setFilterRole('customer')}
-          className={`px-4 py-2 rounded-lg ${filterRole === 'customer' ? 'bg-purple-600 text-white' : 'bg-gray-100 text-gray-700'}`}
-        >
-          Customers ({users.filter(u => u.role === 'customer').length})
-        </button>
+          <option value="">All Roles</option>
+          <option value="customer">Customer</option>
+          <option value="employee">Employee</option>
+          <option value="manager">Manager</option>
+          <option value="admin">Admin</option>
+        </select>
       </div>
 
-      {loading ? (
-        <div className="text-center py-20">Loading users...</div>
-      ) : (
-        <div className="bg-white rounded-lg shadow overflow-hidden">
+      {/* Users Table */}
+      <div className="bg-white rounded-lg shadow-md overflow-hidden">
+        {loading ? (
+          <div className="text-center py-12">Loading...</div>
+        ) : (
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">User</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Role</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Contact</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Role</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Location</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Created</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Joined</th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-200">
-              {filteredUsers.map((user) => (
+            <tbody className="bg-white divide-y divide-gray-200">
+              {users.map((user) => (
                 <tr 
                   key={user.id} 
                   className="hover:bg-gray-50 cursor-pointer"
-                  onClick={() => handleRowClick(user)}
+                  onClick={() => handleUserClick(user)}
                 >
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-3">
-                      <div className={`w-10 h-10 rounded-full flex items-center justify-center ${getRoleBadge(user.role)}`}>
-                        {getRoleIcon(user.role)}
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center">
+                      <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
+                        <User size={20} className="text-gray-500" />
                       </div>
-                      <div>
-                        <p className="font-medium text-gray-900">
-                          {user.firstName || user.lastName ? `${user.firstName || ''} ${user.lastName || ''}`.trim() : 'No Name'}
-                        </p>
-                        <p className="text-sm text-gray-500">{user.email}</p>
+                      <div className="ml-4">
+                        <div className="text-sm font-medium text-gray-900">
+                          {user.firstName} {user.lastName}
+                        </div>
+                        <div className="text-sm text-gray-500">{user.email}</div>
                       </div>
                     </div>
                   </td>
-                  <td className="px-6 py-4">
-                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border ${getRoleBadge(user.role)}`}>
-                      {user.role.toUpperCase()}
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-gray-900">{user.phoneNumber || '-'}</div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${getRoleBadgeColor(user.role)}`}>
+                      {user.role}
                     </span>
                   </td>
-                  <td className="px-6 py-4 text-sm text-gray-600">
-                    {user.phoneNumber || '-'}
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {user.city || '-'}{user.country ? `, ${user.country}` : ''}
                   </td>
-                  <td className="px-6 py-4 text-sm text-gray-600">
-                    {user.city ? `${user.city}, ${user.country}` : '-'}
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-600">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {new Date(user.createdAt).toLocaleDateString()}
                   </td>
-                  <td className="px-6 py-4">
-                    <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
-                      <button
-                        onClick={() => {
-                          setEditingUser(user);
-                          setShowModal(true);
-                        }}
-                        className="p-2 text-blue-600 hover:bg-blue-50 rounded"
-                      >
-                        <Edit size={18} />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(user.id)}
-                        className="p-2 text-red-600 hover:bg-red-50 rounded"
-                      >
-                        <Trash2 size={18} />
-                      </button>
-                    </div>
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleUserClick(user); }}
+                      className="text-gray-600 hover:text-gray-900 mr-3"
+                    >
+                      <Eye size={18} />
+                    </button>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); openEditModal(user); }}
+                      className="text-blue-600 hover:text-blue-900 mr-3"
+                    >
+                      <Edit size={18} />
+                    </button>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleDelete(user.id); }}
+                      className="text-red-600 hover:text-red-900"
+                    >
+                      <Trash2 size={18} />
+                    </button>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
-        </div>
-      )}
+        )}
+      </div>
 
-      {showModal && (
-        <UserModal
-          user={editingUser}
-          onClose={() => setShowModal(false)}
-          onSave={loadUsers}
-        />
-      )}
-
+      {/* User Detail Modal */}
       {showDetailModal && selectedUser && (
-        <UserDetailModal
-          user={selectedUser}
-          onClose={() => {
-            setShowDetailModal(false);
-            setSelectedUser(null);
-          }}
-          onEdit={() => {
-            setShowDetailModal(false);
-            setEditingUser(selectedUser);
-            setShowModal(true);
-          }}
-        />
-      )}
-    </div>
-  );
-};
-
-// User Detail Modal
-const UserDetailModal = ({ user, onClose, onEdit }) => {
-  const [orders, setOrders] = useState([]);
-  const [loadingOrders, setLoadingOrders] = useState(false);
-
-  useEffect(() => {
-    if (user.role === 'customer') {
-      loadUserOrders();
-    }
-  }, [user]);
-
-  const loadUserOrders = async () => {
-    setLoadingOrders(true);
-    try {
-      const { data } = await api.get(`/invoices?userId=${user.id}`);
-      setOrders(data.invoices || []);
-    } catch (error) {
-      console.error('Failed to load orders:', error);
-    } finally {
-      setLoadingOrders(false);
-    }
-  };
-
-  const totalSpent = orders
-    .filter(o => o.paymentStatus === 'completed')
-    .reduce((sum, o) => sum + parseFloat(o.totalAmount || 0), 0);
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b">
-          <h2 className="text-xl font-bold">User Details</h2>
-          <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
-            <X size={24} />
-          </button>
-        </div>
-
-        {/* User Info */}
-        <div className="p-6">
-          <div className="flex items-center gap-4 mb-6">
-            <div className={`w-16 h-16 rounded-full flex items-center justify-center ${
-              user.role === 'admin' ? 'bg-red-100' :
-              user.role === 'manager' ? 'bg-blue-100' :
-              user.role === 'employee' ? 'bg-green-100' : 'bg-purple-100'
-            }`}>
-              <UserIcon size={32} className={
-                user.role === 'admin' ? 'text-red-600' :
-                user.role === 'manager' ? 'text-blue-600' :
-                user.role === 'employee' ? 'text-green-600' : 'text-purple-600'
-              } />
-            </div>
-            <div>
-              <h3 className="text-xl font-semibold">
-                {user.firstName || user.lastName ? `${user.firstName || ''} ${user.lastName || ''}`.trim() : 'No Name'}
-              </h3>
-              <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium mt-1 ${
-                user.role === 'admin' ? 'bg-red-100 text-red-800' :
-                user.role === 'manager' ? 'bg-blue-100 text-blue-800' :
-                user.role === 'employee' ? 'bg-green-100 text-green-800' : 'bg-purple-100 text-purple-800'
-              }`}>
-                {user.role.toUpperCase()}
-              </span>
-            </div>
-          </div>
-
-          {/* Contact Info */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-            <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-              <Mail size={20} className="text-gray-500" />
-              <div>
-                <p className="text-xs text-gray-500">Email</p>
-                <p className="font-medium">{user.email}</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-              <Phone size={20} className="text-gray-500" />
-              <div>
-                <p className="text-xs text-gray-500">Phone</p>
-                <p className="font-medium">{user.phoneNumber || 'Not provided'}</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-              <MapPin size={20} className="text-gray-500" />
-              <div>
-                <p className="text-xs text-gray-500">Location</p>
-                <p className="font-medium">
-                  {user.address && `${user.address}, `}
-                  {user.city && `${user.city}, `}
-                  {user.zipCode && `${user.zipCode}, `}
-                  {user.country || 'Not provided'}
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-              <Calendar size={20} className="text-gray-500" />
-              <div>
-                <p className="text-xs text-gray-500">Member Since</p>
-                <p className="font-medium">{new Date(user.createdAt).toLocaleDateString()}</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Customer Stats & Orders */}
-          {user.role === 'customer' && (
-            <>
-              <div className="grid grid-cols-2 gap-4 mb-6">
-                <div className="bg-blue-50 p-4 rounded-lg text-center">
-                  <p className="text-3xl font-bold text-blue-600">{orders.length}</p>
-                  <p className="text-sm text-gray-600">Total Orders</p>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b sticky top-0 bg-white z-10">
+              <div className="flex justify-between items-start">
+                <div className="flex items-center gap-4">
+                  <div className="h-16 w-16 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center text-white text-2xl font-bold">
+                    {selectedUser.firstName?.[0]}{selectedUser.lastName?.[0]}
+                  </div>
+                  <div>
+                    <h2 className="text-2xl font-bold text-gray-900">
+                      {selectedUser.firstName} {selectedUser.lastName}
+                    </h2>
+                    <p className="text-gray-500">{selectedUser.email}</p>
+                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${getRoleBadgeColor(selectedUser.role)}`}>
+                      {selectedUser.role}
+                    </span>
+                  </div>
                 </div>
-                <div className="bg-green-50 p-4 rounded-lg text-center">
-                  <p className="text-3xl font-bold text-green-600">${totalSpent.toFixed(2)}</p>
-                  <p className="text-sm text-gray-600">Total Spent</p>
+                <button onClick={() => setShowDetailModal(false)} className="text-gray-500 hover:text-gray-700">
+                  <X size={24} />
+                </button>
+              </div>
+            </div>
+
+            <div className="p-6 space-y-6">
+              {/* Contact Info */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-lg">
+                  <Mail className="text-blue-500" size={20} />
+                  <div>
+                    <p className="text-xs text-gray-500">Email</p>
+                    <p className="font-medium">{selectedUser.email}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-lg">
+                  <Phone className="text-green-500" size={20} />
+                  <div>
+                    <p className="text-xs text-gray-500">Phone</p>
+                    <p className="font-medium">{selectedUser.phoneNumber || 'Not provided'}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-lg">
+                  <MapPin className="text-red-500" size={20} />
+                  <div>
+                    <p className="text-xs text-gray-500">Location</p>
+                    <p className="font-medium">
+                      {selectedUser.city || selectedUser.country 
+                        ? `${selectedUser.city || ''}${selectedUser.city && selectedUser.country ? ', ' : ''}${selectedUser.country || ''}`
+                        : 'Not provided'}
+                    </p>
+                  </div>
                 </div>
               </div>
 
-              <h4 className="font-semibold mb-3 flex items-center gap-2">
-                <ShoppingBag size={18} />
-                Recent Orders
-              </h4>
-              
-              {loadingOrders ? (
-                <p className="text-center text-gray-500 py-4">Loading orders...</p>
-              ) : orders.length > 0 ? (
-                <div className="space-y-2 max-h-48 overflow-y-auto">
-                  {orders.slice(0, 5).map(order => (
-                    <div key={order.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+              {/* Stats for Customers */}
+              {selectedUser.role === 'customer' && userStats && (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                    <div className="flex items-center gap-3">
+                      <ShoppingBag className="text-blue-600" size={24} />
                       <div>
-                        <p className="font-medium">{order.invoiceNumber}</p>
-                        <p className="text-xs text-gray-500">{new Date(order.createdAt).toLocaleDateString()}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-semibold">${parseFloat(order.totalAmount).toFixed(2)}</p>
-                        <span className={`text-xs px-2 py-0.5 rounded-full ${
-                          order.paymentStatus === 'completed' ? 'bg-green-100 text-green-800' :
-                          order.paymentStatus === 'pending' ? 'bg-orange-100 text-orange-800' :
-                          'bg-red-100 text-red-800'
-                        }`}>
-                          {order.paymentStatus}
-                        </span>
+                        <p className="text-sm text-blue-600">Total Orders</p>
+                        <p className="text-2xl font-bold text-blue-800">{userStats.totalOrders}</p>
                       </div>
                     </div>
-                  ))}
+                  </div>
+                  <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+                    <div className="flex items-center gap-3">
+                      <DollarSign className="text-green-600" size={24} />
+                      <div>
+                        <p className="text-sm text-green-600">Total Spent</p>
+                        <p className="text-2xl font-bold text-green-800">${userStats.totalSpent}</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                    <div className="flex items-center gap-3">
+                      <Package className="text-purple-600" size={24} />
+                      <div>
+                        <p className="text-sm text-purple-600">Avg. Order</p>
+                        <p className="text-2xl font-bold text-purple-800">${userStats.averageOrder}</p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              ) : (
-                <p className="text-center text-gray-500 py-4">No orders yet</p>
               )}
-            </>
-          )}
+
+              {/* Orders History */}
+              {selectedUser.role === 'customer' && (
+                <div>
+                  <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                    <ShoppingBag size={20} />
+                    Order History
+                  </h3>
+                  
+                  {loadingOrders ? (
+                    <div className="text-center py-8 text-gray-500">Loading orders...</div>
+                  ) : userOrders.length > 0 ? (
+                    <div className="space-y-4">
+                      {userOrders.map(order => (
+                        <div key={order.id} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
+                          <div className="flex justify-between items-start mb-3">
+                            <div>
+                              <p className="font-semibold text-lg">{order.invoiceNumber}</p>
+                              <p className="text-sm text-gray-500">
+                                {new Date(order.createdAt).toLocaleDateString('en-US', {
+                                  year: 'numeric',
+                                  month: 'long',
+                                  day: 'numeric',
+                                  hour: '2-digit',
+                                  minute: '2-digit'
+                                })}
+                              </p>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-xl font-bold text-gray-900">${parseFloat(order.totalAmount).toFixed(2)}</p>
+                              <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                                order.paymentStatus === 'completed' ? 'bg-green-100 text-green-800' :
+                                order.paymentStatus === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                                'bg-red-100 text-red-800'
+                              }`}>
+                                {order.paymentStatus}
+                              </span>
+                            </div>
+                          </div>
+                          
+                          {/* Order Items */}
+                          <div className="border-t pt-3 mt-3">
+                            <p className="text-sm text-gray-500 mb-2">{order.items?.length || 0} items</p>
+                            <div className="flex flex-wrap gap-2">
+                              {order.items?.slice(0, 4).map((item, idx) => (
+                                <div key={idx} className="flex items-center gap-2 bg-gray-50 px-3 py-1 rounded-full text-sm">
+                                  {item.product?.pictureUrl && (
+                                    <img src={item.product.pictureUrl} alt="" className="w-6 h-6 rounded-full object-cover" />
+                                  )}
+                                  <span>{item.quantity}x {item.product?.name || 'Product'}</span>
+                                </div>
+                              ))}
+                              {order.items?.length > 4 && (
+                                <span className="text-gray-500 text-sm">+{order.items.length - 4} more</span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 text-gray-500 bg-gray-50 rounded-lg">
+                      <ShoppingBag size={48} className="mx-auto text-gray-300 mb-2" />
+                      <p>No orders yet</p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
         </div>
+      )}
 
-        {/* Footer */}
-        <div className="flex gap-3 p-6 border-t">
-          <button
-            onClick={onEdit}
-            className="flex-1 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700"
-          >
-            Edit User
-          </button>
-          <button
-            onClick={onClose}
-            className="flex-1 bg-gray-200 text-gray-700 py-2 rounded-lg hover:bg-gray-300"
-          >
-            Close
-          </button>
+      {/* Create/Edit User Modal */}
+      {showModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b">
+              <div className="flex justify-between items-center">
+                <h2 className="text-xl font-bold">{selectedUser ? 'Edit User' : 'Create User'}</h2>
+                <button onClick={() => { setShowModal(false); resetForm(); }} className="text-gray-500 hover:text-gray-700">
+                  <X size={24} />
+                </button>
+              </div>
+            </div>
+            
+            <form onSubmit={selectedUser ? handleUpdate : handleCreate} className="p-6 space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
+                  <input
+                    type="email"
+                    required
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Password {selectedUser ? '(leave blank to keep)' : '*'}
+                  </label>
+                  <input
+                    type="password"
+                    required={!selectedUser}
+                    value={formData.password}
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">First Name</label>
+                  <input
+                    type="text"
+                    value={formData.firstName}
+                    onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
+                  <input
+                    type="text"
+                    value={formData.lastName}
+                    onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Role *</label>
+                  <select
+                    value={formData.role}
+                    onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="customer">Customer</option>
+                    <option value="employee">Employee</option>
+                    <option value="manager">Manager</option>
+                    <option value="admin">Admin</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                  <input
+                    type="tel"
+                    value={formData.phoneNumber}
+                    onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
+                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
+                  <input
+                    type="text"
+                    value={formData.address}
+                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
+                  <input
+                    type="text"
+                    value={formData.city}
+                    onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Zip Code</label>
+                  <input
+                    type="text"
+                    value={formData.zipCode}
+                    onChange={(e) => setFormData({ ...formData, zipCode: e.target.value })}
+                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Country</label>
+                  <input
+                    type="text"
+                    value={formData.country}
+                    onChange={(e) => setFormData({ ...formData, country: e.target.value })}
+                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+              
+              <div className="flex justify-end gap-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => { setShowModal(false); resetForm(); }}
+                  className="px-4 py-2 border rounded-lg hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                >
+                  {selectedUser ? 'Update' : 'Create'}
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
-      </div>
-    </div>
-  );
-};
-
-const UserModal = ({ user, onClose, onSave }) => {
-  const [formData, setFormData] = useState({
-    email: user?.email || '',
-    password: '',
-    role: user?.role || 'customer',
-    firstName: user?.firstName || '',
-    lastName: user?.lastName || '',
-    phoneNumber: user?.phoneNumber || '',
-    address: user?.address || '',
-    zipCode: user?.zipCode || '',
-    city: user?.city || '',
-    country: user?.country || ''
-  });
-  const [loading, setLoading] = useState(false);
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-
-    try {
-      if (user) {
-        const updateData = { 
-          role: formData.role,
-          firstName: formData.firstName,
-          lastName: formData.lastName,
-          phoneNumber: formData.phoneNumber,
-          address: formData.address,
-          zipCode: formData.zipCode,
-          city: formData.city,
-          country: formData.country
-        };
-        if (formData.password) {
-          updateData.password = formData.password;
-        }
-        await api.put(`/users/${user.id}`, updateData);
-      } else {
-        await api.post('/users', {
-          email: formData.email,
-          password: formData.password,
-          role: formData.role,
-          firstName: formData.firstName,
-          lastName: formData.lastName,
-          phoneNumber: formData.phoneNumber,
-          address: formData.address,
-          zipCode: formData.zipCode,
-          city: formData.city,
-          country: formData.country
-        });
-      }
-      onSave();
-      onClose();
-    } catch (error) {
-      alert('Failed to save user: ' + (error.response?.data?.error || error.message));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-        <h2 className="text-2xl font-bold mb-6">
-          {user ? 'Edit User' : 'Add New User'}
-        </h2>
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">First Name</label>
-              <input
-                type="text"
-                value={formData.firstName}
-                onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Last Name</label>
-              <input
-                type="text"
-                value={formData.lastName}
-                onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Email *</label>
-            <input
-              type="email"
-              value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              required
-              disabled={!!user}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Password {user ? '(leave blank to keep current)' : '*'}
-            </label>
-            <input
-              type="password"
-              value={formData.password}
-              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-              required={!user}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Role *</label>
-            <select
-              value={formData.role}
-              onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-              required
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="customer">Customer</option>
-              <option value="employee">Employee</option>
-              <option value="manager">Manager</option>
-              <option value="admin">Admin</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
-            <input
-              type="tel"
-              value={formData.phoneNumber}
-              onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">City</label>
-              <input
-                type="text"
-                value={formData.city}
-                onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Country</label>
-              <input
-                type="text"
-                value={formData.country}
-                onChange={(e) => setFormData({ ...formData, country: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-          </div>
-
-          <div className="flex gap-3 pt-4">
-            <button
-              type="submit"
-              disabled={loading}
-              className="flex-1 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50"
-            >
-              {loading ? 'Saving...' : 'Save User'}
-            </button>
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 bg-gray-200 text-gray-700 py-2 rounded-lg hover:bg-gray-300"
-            >
-              Cancel
-            </button>
-          </div>
-        </form>
-      </div>
+      )}
     </div>
   );
 };
