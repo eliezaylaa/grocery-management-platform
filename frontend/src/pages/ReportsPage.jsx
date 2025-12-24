@@ -79,20 +79,6 @@ export const ReportsPage = () => {
     { name: 'Failed', value: kpis.orders?.failed || 0, color: '#ef4444' }
   ].filter(item => item.value > 0);
 
-  // Custom label for pie chart
-  const renderCustomLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent, name }) => {
-    const RADIAN = Math.PI / 180;
-    const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
-    const x = cx + radius * Math.cos(-midAngle * RADIAN);
-    const y = cy + radius * Math.sin(-midAngle * RADIAN);
-
-    return percent > 0.05 ? (
-      <text x={x} y={y} fill="white" textAnchor="middle" dominantBaseline="central" fontSize={12} fontWeight="bold">
-        {`${(percent * 100).toFixed(0)}%`}
-      </text>
-    ) : null;
-  };
-
   return (
     <div className="space-y-8">
       <div className="flex justify-between items-center">
@@ -261,28 +247,29 @@ export const ReportsPage = () => {
             Payment Methods
           </h2>
           {kpis.paymentDistribution && kpis.paymentDistribution.length > 0 ? (
-            <>
-              <ResponsiveContainer width="100%" height={250}>
-                <PieChart>
-                  <Pie
-                    data={kpis.paymentDistribution}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={50}
-                    outerRadius={80}
-                    paddingAngle={5}
-                    dataKey="count"
-                    labelLine={false}
-                    label={renderCustomLabel}
-                  >
-                    {kpis.paymentDistribution.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip formatter={(value) => [value, 'Orders']} />
-                </PieChart>
-              </ResponsiveContainer>
-              <div className="flex flex-wrap justify-center gap-4 mt-4">
+            <div>
+              <div style={{ width: '100%', height: 250 }}>
+                <ResponsiveContainer>
+                  <PieChart>
+                    <Pie
+                      data={kpis.paymentDistribution}
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={80}
+                      fill="#8884d8"
+                      dataKey="count"
+                      label={({ name, percent }) => `${(percent * 100).toFixed(0)}%`}
+                      labelLine={true}
+                    >
+                      {kpis.paymentDistribution.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={(value) => [value, 'Orders']} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="flex flex-wrap justify-center gap-3 mt-4">
                 {kpis.paymentDistribution.map((entry, index) => (
                   <div key={entry.method} className="flex items-center gap-2">
                     <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[index % COLORS.length] }}></div>
@@ -291,7 +278,7 @@ export const ReportsPage = () => {
                   </div>
                 ))}
               </div>
-            </>
+            </div>
           ) : (
             <div className="h-64 flex items-center justify-center text-gray-500">
               <div className="text-center">
@@ -309,28 +296,29 @@ export const ReportsPage = () => {
             Order Status
           </h2>
           {orderStatusData.length > 0 ? (
-            <>
-              <ResponsiveContainer width="100%" height={250}>
-                <PieChart>
-                  <Pie
-                    data={orderStatusData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={50}
-                    outerRadius={80}
-                    paddingAngle={5}
-                    dataKey="value"
-                    labelLine={false}
-                    label={renderCustomLabel}
-                  >
-                    {orderStatusData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip formatter={(value) => [value, 'Orders']} />
-                </PieChart>
-              </ResponsiveContainer>
-              <div className="flex flex-wrap justify-center gap-4 mt-4">
+            <div>
+              <div style={{ width: '100%', height: 250 }}>
+                <ResponsiveContainer>
+                  <PieChart>
+                    <Pie
+                      data={orderStatusData}
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={80}
+                      fill="#8884d8"
+                      dataKey="value"
+                      label={({ name, percent }) => `${(percent * 100).toFixed(0)}%`}
+                      labelLine={true}
+                    >
+                      {orderStatusData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={(value) => [value, 'Orders']} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="flex flex-wrap justify-center gap-3 mt-4">
                 {orderStatusData.map((entry) => (
                   <div key={entry.name} className="flex items-center gap-2">
                     <div className="w-3 h-3 rounded-full" style={{ backgroundColor: entry.color }}></div>
@@ -339,7 +327,7 @@ export const ReportsPage = () => {
                   </div>
                 ))}
               </div>
-            </>
+            </div>
           ) : (
             <div className="h-64 flex items-center justify-center text-gray-500">
               <div className="text-center">
@@ -357,28 +345,29 @@ export const ReportsPage = () => {
             Revenue by Payment
           </h2>
           {kpis.paymentDistribution && kpis.paymentDistribution.length > 0 ? (
-            <>
-              <ResponsiveContainer width="100%" height={250}>
-                <PieChart>
-                  <Pie
-                    data={kpis.paymentDistribution.map(p => ({ ...p, total: parseFloat(p.total) }))}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={50}
-                    outerRadius={80}
-                    paddingAngle={5}
-                    dataKey="total"
-                    labelLine={false}
-                    label={renderCustomLabel}
-                  >
-                    {kpis.paymentDistribution.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip formatter={(value) => [`$${parseFloat(value).toFixed(2)}`, 'Revenue']} />
-                </PieChart>
-              </ResponsiveContainer>
-              <div className="flex flex-wrap justify-center gap-4 mt-4">
+            <div>
+              <div style={{ width: '100%', height: 250 }}>
+                <ResponsiveContainer>
+                  <PieChart>
+                    <Pie
+                      data={kpis.paymentDistribution.map(p => ({ ...p, totalNum: parseFloat(p.total) || 0 }))}
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={80}
+                      fill="#8884d8"
+                      dataKey="totalNum"
+                      label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
+                      labelLine={true}
+                    >
+                      {kpis.paymentDistribution.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={(value) => [`$${parseFloat(value).toFixed(2)}`, 'Revenue']} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="flex flex-wrap justify-center gap-3 mt-4">
                 {kpis.paymentDistribution.map((entry, index) => (
                   <div key={entry.method} className="flex items-center gap-2">
                     <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[index % COLORS.length] }}></div>
@@ -387,7 +376,7 @@ export const ReportsPage = () => {
                   </div>
                 ))}
               </div>
-            </>
+            </div>
           ) : (
             <div className="h-64 flex items-center justify-center text-gray-500">
               <div className="text-center">
