@@ -7,7 +7,7 @@ import { productService } from '../services/productService';
 import { 
   ShoppingCart, AlertTriangle, DollarSign, TrendingUp, Package, 
   ShoppingBag, Clock, CheckCircle, CreditCard, ArrowRight,
-  Clipboard, BoxIcon, Users, Activity, Wallet, Banknote
+  Clipboard, BoxIcon, Users, Activity
 } from 'lucide-react';
 import {
   BarChart, Bar, PieChart, Pie, Cell,
@@ -28,6 +28,8 @@ const ManagerDashboard = () => {
   const loadKPIs = async () => {
     try {
       const data = await reportService.getKPIs();
+      console.log('KPIs loaded:', data); // Debug
+      console.log('Payment distribution:', data.paymentDistribution); // Debug
       setKpis(data);
     } catch (error) {
       console.error('Failed to load KPIs:', error);
@@ -48,21 +50,25 @@ const ManagerDashboard = () => {
     return <div className="text-center py-20 text-gray-500">Failed to load dashboard</div>;
   }
 
-  // Payment method colors - distinct professional colors
+  // Payment method colors
   const PAYMENT_COLORS = {
-    card: '#4F46E5',    // Indigo
-    paypal: '#0EA5E9',  // Sky blue
-    cash: '#10B981'     // Emerald
+    card: '#6366F1',
+    paypal: '#3B82F6', 
+    cash: '#10B981'
   };
 
-  const paymentData = kpis.paymentDistribution?.map(p => ({
-    name: p.method.charAt(0).toUpperCase() + p.method.slice(1),
-    value: p.count,
-    total: parseFloat(p.total),
+  // Build payment data for pie chart
+  const paymentData = (kpis.paymentDistribution || []).map(p => ({
+    name: p.method ? p.method.charAt(0).toUpperCase() + p.method.slice(1) : 'Unknown',
+    value: parseInt(p.count) || 0,
+    total: parseFloat(p.total) || 0,
     color: PAYMENT_COLORS[p.method] || '#6B7280'
-  })) || [];
+  })).filter(p => p.value > 0);
+
+  console.log('Processed payment data:', paymentData); // Debug
 
   const totalOrders = (kpis.orders?.completed || 0) + (kpis.orders?.pending || 0) + (kpis.orders?.failed || 0);
+  const totalPaymentOrders = paymentData.reduce((sum, p) => sum + p.value, 0);
 
   return (
     <div className="space-y-6">
@@ -86,7 +92,7 @@ const ManagerDashboard = () => {
               <p className="text-2xl font-semibold text-gray-900 mt-1">${kpis.totalRevenue?.value || '0'}</p>
               {kpis.totalRevenue?.change !== 0 && (
                 <p className={`text-xs mt-1 ${parseFloat(kpis.totalRevenue?.change) >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                  {parseFloat(kpis.totalRevenue?.change) >= 0 ? '↑' : '↓'} {Math.abs(kpis.totalRevenue?.change)}% from last month
+                  {parseFloat(kpis.totalRevenue?.change) >= 0 ? '↑' : '↓'} {Math.abs(kpis.totalRevenue?.change || 0)}% from last month
                 </p>
               )}
             </div>
@@ -149,8 +155,8 @@ const ManagerDashboard = () => {
               <AreaChart data={kpis.dailySales}>
                 <defs>
                   <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#4F46E5" stopOpacity={0.1}/>
-                    <stop offset="95%" stopColor="#4F46E5" stopOpacity={0}/>
+                    <stop offset="5%" stopColor="#6366F1" stopOpacity={0.1}/>
+                    <stop offset="95%" stopColor="#6366F1" stopOpacity={0}/>
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
@@ -160,7 +166,7 @@ const ManagerDashboard = () => {
                   contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}
                   formatter={(value) => [`$${value}`, 'Revenue']}
                 />
-                <Area type="monotone" dataKey="revenue" stroke="#4F46E5" strokeWidth={2} fill="url(#colorRevenue)" />
+                <Area type="monotone" dataKey="revenue" stroke="#6366F1" strokeWidth={2} fill="url(#colorRevenue)" />
               </AreaChart>
             </ResponsiveContainer>
           ) : (
@@ -172,17 +178,19 @@ const ManagerDashboard = () => {
 
         {/* Payment Methods Pie Chart */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-5">
-          <h2 className="font-medium text-gray-900 mb-4">Payment Methods</h2>
+          <h2 className="font-medium text-gray-900 mb-2">Payment Methods</h2>
+          <p className="text-xs text-gray-500 mb-4">All time · All customers</p>
+          
           {paymentData.length > 0 ? (
             <div>
-              <ResponsiveContainer width="100%" height={180}>
-                <PieChart>
+              <div className="flex justify-center">
+                <PieChart width={200} height={200}>
                   <Pie
                     data={paymentData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={45}
-                    outerRadius={70}
+                    cx={100}
+                    cy={100}
+                    innerRadius={55}
+                    outerRadius={85}
                     dataKey="value"
                     strokeWidth={0}
                   >
@@ -192,28 +200,34 @@ const ManagerDashboard = () => {
                   </Pie>
                   <Tooltip 
                     contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb' }}
-                    formatter={(value, name, props) => [value, `${props.payload.name} orders`]}
+                    formatter={(value, name, props) => [`${value} orders`, props.payload.name]}
                   />
                 </PieChart>
-              </ResponsiveContainer>
-              <div className="space-y-2 mt-2">
+              </div>
+              <div className="text-center mb-4">
+                <p className="text-2xl font-semibold text-gray-900">{totalPaymentOrders}</p>
+                <p className="text-xs text-gray-500">Total Orders</p>
+              </div>
+              <div className="space-y-3">
                 {paymentData.map((entry) => (
-                  <div key={entry.name} className="flex items-center justify-between text-sm">
+                  <div key={entry.name} className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: entry.color }}></div>
-                      <span className="text-gray-600">{entry.name}</span>
+                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: entry.color }}></div>
+                      <span className="text-sm text-gray-600">{entry.name}</span>
                     </div>
                     <div className="text-right">
-                      <span className="font-medium text-gray-900">{entry.value}</span>
-                      <span className="text-gray-400 ml-1">· ${entry.total.toFixed(0)}</span>
+                      <span className="text-sm font-medium text-gray-900">{entry.value}</span>
+                      <span className="text-xs text-gray-400 ml-2">${entry.total.toFixed(2)}</span>
                     </div>
                   </div>
                 ))}
               </div>
             </div>
           ) : (
-            <div className="h-60 flex items-center justify-center text-gray-400">
-              No payment data
+            <div className="h-64 flex flex-col items-center justify-center text-gray-400">
+              <CreditCard size={32} className="mb-2 text-gray-300" />
+              <p className="text-sm">No payment data yet</p>
+              <p className="text-xs mt-1">Complete some orders to see stats</p>
             </div>
           )}
         </div>
@@ -221,7 +235,7 @@ const ManagerDashboard = () => {
 
       {/* Bottom Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Top Products - Horizontal Bars */}
+        {/* Top Products */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-5">
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-medium text-gray-900">Top Products</h2>
@@ -233,7 +247,7 @@ const ManagerDashboard = () => {
             <div className="space-y-3">
               {kpis.topProducts.slice(0, 5).map((product, index) => {
                 const maxQty = Math.max(...kpis.topProducts.slice(0, 5).map(p => p.quantitySold));
-                const percentage = (product.quantitySold / maxQty) * 100;
+                const percentage = maxQty > 0 ? (product.quantitySold / maxQty) * 100 : 0;
                 return (
                   <div key={product.id || index}>
                     <div className="flex items-center justify-between text-sm mb-1">
@@ -369,7 +383,6 @@ const EmployeeDashboard = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-100">
         <h1 className="text-xl font-semibold text-gray-900">
           Good {new Date().getHours() < 12 ? 'morning' : new Date().getHours() < 18 ? 'afternoon' : 'evening'}, {user?.firstName || 'there'}
@@ -379,7 +392,6 @@ const EmployeeDashboard = () => {
         </p>
       </div>
 
-      {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-white rounded-lg p-5 shadow-sm border border-gray-100">
           <p className="text-xs font-medium text-gray-500 uppercase">Today's Orders</p>
@@ -399,7 +411,6 @@ const EmployeeDashboard = () => {
         </div>
       </div>
 
-      {/* Quick Actions */}
       <div className="grid grid-cols-3 gap-4">
         <button onClick={() => navigate('/products')} className="bg-white rounded-lg p-4 shadow-sm border border-gray-100 hover:border-gray-300 transition-colors text-left">
           <Package size={20} className="text-gray-400 mb-2" />
@@ -418,7 +429,6 @@ const EmployeeDashboard = () => {
         </button>
       </div>
 
-      {/* Recent Orders */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-100">
         <div className="p-4 border-b border-gray-100 flex items-center justify-between">
           <h2 className="font-medium text-gray-900">Recent Orders</h2>
@@ -482,13 +492,11 @@ const CustomerDashboard = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-100">
         <h1 className="text-xl font-semibold text-gray-900">Welcome back, {user?.firstName || 'there'}</h1>
         <p className="text-gray-500 text-sm mt-1">Track your orders and shopping activity</p>
       </div>
 
-      {/* Stats */}
       <div className="grid grid-cols-3 gap-4">
         <div className="bg-white rounded-lg p-5 shadow-sm border border-gray-100">
           <p className="text-xs font-medium text-gray-500 uppercase">Orders</p>
@@ -504,7 +512,6 @@ const CustomerDashboard = () => {
         </div>
       </div>
 
-      {/* Actions */}
       <div className="grid grid-cols-2 gap-4">
         <button onClick={() => navigate('/shop')} className="bg-gray-900 text-white rounded-lg p-5 text-left hover:bg-gray-800 transition-colors">
           <ShoppingCart size={24} className="mb-3" />
@@ -518,7 +525,6 @@ const CustomerDashboard = () => {
         </button>
       </div>
 
-      {/* Recent Orders */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-100">
         <div className="p-4 border-b border-gray-100">
           <h2 className="font-medium text-gray-900">Recent Orders</h2>
