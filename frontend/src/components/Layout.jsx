@@ -22,7 +22,6 @@ export const Layout = () => {
   const [cartCount, setCartCount] = useState(0);
 
   useEffect(() => {
-    // Listen for cart updates
     const updateCartCount = () => {
       const cart = JSON.parse(localStorage.getItem('cart') || '[]');
       setCartCount(cart.reduce((sum, item) => sum + item.quantity, 0));
@@ -42,7 +41,7 @@ export const Layout = () => {
     { name: "Dashboard", href: "/", icon: LayoutDashboard },
     { name: "Shop", href: "/shop", icon: ShoppingCart },
     { name: "Products", href: "/products", icon: Package, roles: ['admin', 'manager'] },
-    { name: "Invoices", href: "/invoices", icon: FileText, roles: ['admin', 'manager'] },
+    { name: "Invoices", href: "/invoices", icon: FileText, roles: ['admin', 'manager', 'employee'] },
     { name: "My Orders", href: "/my-orders", icon: FileText },
     { name: "Reports", href: "/reports", icon: BarChart3, roles: ['admin', 'manager'] },
     { name: "Users", href: "/users", icon: UserCog, roles: ['admin'] },
@@ -114,6 +113,7 @@ export const Layout = () => {
                   <span className={`text-xs px-2 py-0.5 rounded-full ${
                     user?.role === 'admin' ? 'bg-red-100 text-red-700' :
                     user?.role === 'manager' ? 'bg-blue-100 text-blue-700' :
+                    user?.role === 'employee' ? 'bg-green-100 text-green-700' :
                     'bg-gray-200 text-gray-700'
                   }`}>
                     {user?.role}

@@ -5,6 +5,7 @@ const {
   verifyToken,
   isAdmin,
   isManager,
+  isEmployee,
 } = require("../middleware/auth.middleware");
 
 /**
@@ -103,7 +104,7 @@ const {
  * @swagger
  * /api/invoices:
  *   get:
- *     summary: Get all invoices (Manager/Admin only)
+ *     summary: Get all invoices (Admin/Manager/Employee)
  *     tags: [Invoices]
  *     security:
  *       - bearerAuth: []
@@ -122,9 +123,9 @@ const {
  *       200:
  *         description: List of invoices
  *       403:
- *         description: Manager access required
+ *         description: Employee access required
  */
-router.get("/", verifyToken, isManager, invoiceController.getInvoices);
+router.get("/", verifyToken, isEmployee, invoiceController.getInvoices);
 
 /**
  * @swagger
@@ -168,7 +169,7 @@ router.post("/", verifyToken, invoiceController.createInvoice);
  * @swagger
  * /api/invoices/{id}:
  *   put:
- *     summary: Update invoice payment status (Manager/Admin only)
+ *     summary: Update invoice payment status (Admin/Manager/Employee)
  *     tags: [Invoices]
  *     security:
  *       - bearerAuth: []
@@ -195,9 +196,9 @@ router.post("/", verifyToken, invoiceController.createInvoice);
  *       404:
  *         description: Invoice not found
  *       403:
- *         description: Manager access required
+ *         description: Employee access required
  */
-router.put("/:id", verifyToken, isManager, invoiceController.updateInvoice);
+router.put("/:id", verifyToken, isEmployee, invoiceController.updateInvoice);
 
 /**
  * @swagger

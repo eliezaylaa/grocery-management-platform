@@ -4,18 +4,14 @@ const { User } = require("../models");
 exports.verifyToken = async (req, res, next) => {
   try {
     const token = req.headers.authorization?.split(" ")[1];
-
     if (!token) {
       return res.status(401).json({ error: "Access token required" });
     }
-
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const user = await User.findByPk(decoded.id);
-
     if (!user) {
       return res.status(401).json({ error: "Invalid token" });
     }
-
     req.user = user;
     next();
   } catch (error) {
@@ -36,6 +32,15 @@ exports.isAdmin = (req, res, next) => {
 exports.isManager = (req, res, next) => {
   if (req.user.role !== "admin" && req.user.role !== "manager") {
     return res.status(403).json({ error: "Manager access required" });
+  }
+  next();
+};
+
+// Allows admin, manager, and employee
+exports.isEmployee = (req, res, next) => {
+  const allowedRoles = ["admin", "manager", "employee"];
+  if (!allowedRoles.includes(req.user.role)) {
+    return res.status(403).json({ error: "Employee access required" });
   }
   next();
 };
