@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { reportService } from '../services/reportService';
 import {
   DollarSign, TrendingUp, ShoppingCart, Users, Package,
-  AlertTriangle, Activity, RefreshCw
+  CreditCard, RefreshCw
 } from 'lucide-react';
 import {
   BarChart, Bar, PieChart, Pie, Cell,
@@ -47,25 +47,22 @@ export const ReportsPage = () => {
     );
   }
 
-  // Payment method colors
+  // Payment method colors - Card purple, PayPal yellow, Cash green
   const PAYMENT_COLORS = {
-    card: '#4F46E5',
-    paypal: '#0EA5E9', 
-    cash: '#10B981'
+    card: '#6366F1',
+    paypal: '#EAB308', 
+    cash: '#10B981',
+    unknown: '#6B7280'
   };
 
-  const paymentData = kpis.paymentDistribution?.map(p => ({
-    name: p.method.charAt(0).toUpperCase() + p.method.slice(1),
-    value: p.count,
-    total: parseFloat(p.total),
+  const paymentData = (kpis.paymentDistribution || []).map(p => ({
+    name: p.method ? p.method.charAt(0).toUpperCase() + p.method.slice(1) : 'Unknown',
+    value: parseInt(p.count) || 0,
+    total: parseFloat(p.total) || 0,
     color: PAYMENT_COLORS[p.method] || '#6B7280'
-  })) || [];
+  }));
 
-  const orderStatusData = [
-    { name: 'Completed', value: kpis.orders?.completed || 0, color: '#10B981' },
-    { name: 'Pending', value: kpis.orders?.pending || 0, color: '#F59E0B' },
-    { name: 'Failed', value: kpis.orders?.failed || 0, color: '#EF4444' }
-  ].filter(item => item.value > 0);
+  const totalPaymentOrders = paymentData.reduce((sum, p) => sum + p.value, 0);
 
   return (
     <div className="space-y-6">
@@ -132,18 +129,18 @@ export const ReportsPage = () => {
         </div>
       </div>
 
-      {/* Charts Row 1 */}
+      {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Revenue Chart */}
         <div className="lg:col-span-2 bg-white rounded-lg shadow-sm border border-gray-100 p-5">
-          <h2 className="font-medium text-gray-900 mb-4">Revenue Trend</h2>
+          <h2 className="font-medium text-gray-900 mb-4">Revenue Trend (Last 7 Days)</h2>
           {kpis.dailySales?.length > 0 ? (
             <ResponsiveContainer width="100%" height={280}>
               <AreaChart data={kpis.dailySales}>
                 <defs>
                   <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#4F46E5" stopOpacity={0.1}/>
-                    <stop offset="95%" stopColor="#4F46E5" stopOpacity={0}/>
+                    <stop offset="5%" stopColor="#6366F1" stopOpacity={0.1}/>
+                    <stop offset="95%" stopColor="#6366F1" stopOpacity={0}/>
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
@@ -153,7 +150,7 @@ export const ReportsPage = () => {
                   contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb' }}
                   formatter={(value) => [`$${value}`, 'Revenue']}
                 />
-                <Area type="monotone" dataKey="revenue" stroke="#4F46E5" strokeWidth={2} fill="url(#colorRev)" />
+                <Area type="monotone" dataKey="revenue" stroke="#6366F1" strokeWidth={2} fill="url(#colorRev)" />
               </AreaChart>
             </ResponsiveContainer>
           ) : (
@@ -161,21 +158,22 @@ export const ReportsPage = () => {
           )}
         </div>
 
-        {/* Payment Methods Donut */}
+        {/* Payment Methods Pie - SOLID DISK */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-5">
-          <h2 className="font-medium text-gray-900 mb-4">Payment Methods</h2>
-          {paymentData.length > 0 ? (
+          <h2 className="font-medium text-gray-900 mb-1">Payment Methods</h2>
+          <p className="text-xs text-gray-500 mb-4">All time purchases</p>
+          {paymentData.length > 0 && totalPaymentOrders > 0 ? (
             <div>
-              <ResponsiveContainer width="100%" height={180}>
-                <PieChart>
+              <div className="flex justify-center">
+                <PieChart width={180} height={180}>
                   <Pie
                     data={paymentData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={50}
-                    outerRadius={75}
+                    cx={90}
+                    cy={90}
+                    outerRadius={80}
                     dataKey="value"
-                    strokeWidth={0}
+                    strokeWidth={2}
+                    stroke="#fff"
                   >
                     {paymentData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
@@ -183,15 +181,19 @@ export const ReportsPage = () => {
                   </Pie>
                   <Tooltip 
                     contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb' }}
-                    formatter={(value) => [value, 'Orders']}
+                    formatter={(value, name, props) => [`${value} orders`, props.payload.name]}
                   />
                 </PieChart>
-              </ResponsiveContainer>
+              </div>
+              <div className="text-center mb-4">
+                <p className="text-2xl font-semibold text-gray-900">{totalPaymentOrders}</p>
+                <p className="text-xs text-gray-500">Total Orders</p>
+              </div>
               <div className="space-y-2">
                 {paymentData.map((entry) => (
                   <div key={entry.name} className="flex items-center justify-between text-sm">
                     <div className="flex items-center gap-2">
-                      <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: entry.color }}></div>
+                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: entry.color }}></div>
                       <span className="text-gray-600">{entry.name}</span>
                     </div>
                     <span className="font-medium">{entry.value} · ${entry.total.toFixed(0)}</span>
@@ -200,66 +202,29 @@ export const ReportsPage = () => {
               </div>
             </div>
           ) : (
-            <div className="h-64 flex items-center justify-center text-gray-400">No data</div>
+            <div className="h-64 flex flex-col items-center justify-center text-gray-400">
+              <CreditCard size={32} className="mb-2 text-gray-300" />
+              <p className="text-sm">No payment data yet</p>
+            </div>
           )}
         </div>
       </div>
 
-      {/* Charts Row 2 */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Orders by Day */}
+      {/* Second Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Daily Orders */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-5">
           <h2 className="font-medium text-gray-900 mb-4">Daily Orders</h2>
           {kpis.dailySales?.length > 0 ? (
-            <ResponsiveContainer width="100%" height={200}>
+            <ResponsiveContainer width="100%" height={220}>
               <BarChart data={kpis.dailySales}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                 <XAxis dataKey="dayName" tick={{ fontSize: 11 }} stroke="#9CA3AF" />
                 <YAxis tick={{ fontSize: 11 }} stroke="#9CA3AF" />
                 <Tooltip contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb' }} />
-                <Bar dataKey="orders" fill="#4F46E5" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="orders" fill="#6366F1" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
-          ) : (
-            <div className="h-48 flex items-center justify-center text-gray-400">No data</div>
-          )}
-        </div>
-
-        {/* Order Status */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-5">
-          <h2 className="font-medium text-gray-900 mb-4">Order Status</h2>
-          {orderStatusData.length > 0 ? (
-            <div>
-              <ResponsiveContainer width="100%" height={140}>
-                <PieChart>
-                  <Pie
-                    data={orderStatusData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={40}
-                    outerRadius={60}
-                    dataKey="value"
-                    strokeWidth={0}
-                  >
-                    {orderStatusData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb' }} />
-                </PieChart>
-              </ResponsiveContainer>
-              <div className="space-y-2">
-                {orderStatusData.map((entry) => (
-                  <div key={entry.name} className="flex items-center justify-between text-sm">
-                    <div className="flex items-center gap-2">
-                      <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: entry.color }}></div>
-                      <span className="text-gray-600">{entry.name}</span>
-                    </div>
-                    <span className="font-medium">{entry.value}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
           ) : (
             <div className="h-48 flex items-center justify-center text-gray-400">No data</div>
           )}
@@ -293,7 +258,7 @@ export const ReportsPage = () => {
         </div>
       </div>
 
-      {/* Bottom Row */}
+      {/* Third Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Top Products */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-5">
@@ -302,7 +267,7 @@ export const ReportsPage = () => {
             <div className="space-y-3">
               {kpis.topProducts.slice(0, 5).map((product, index) => {
                 const maxQty = Math.max(...kpis.topProducts.slice(0, 5).map(p => p.quantitySold));
-                const percentage = (product.quantitySold / maxQty) * 100;
+                const percentage = maxQty > 0 ? (product.quantitySold / maxQty) * 100 : 0;
                 return (
                   <div key={product.id || index}>
                     <div className="flex items-center justify-between text-sm mb-1">
@@ -326,7 +291,7 @@ export const ReportsPage = () => {
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-medium text-gray-900">Low Stock</h2>
             {kpis.lowStock?.length > 0 && (
-              <span className="text-xs bg-red-50 text-red-600 px-2 py-1 rounded-full">{kpis.lowStock.length} items</span>
+              <span className="text-xs bg-red-50 text-red-600 px-2 py-1 rounded-full">{kpis.lowStock.length}</span>
             )}
           </div>
           {kpis.lowStock?.length > 0 ? (
@@ -375,7 +340,7 @@ export const ReportsPage = () => {
             </p>
           </div>
           <div>
-            <p className="text-gray-400 text-xs uppercase">Pending Orders</p>
+            <p className="text-gray-400 text-xs uppercase">Pending</p>
             <p className="text-2xl font-semibold mt-1">{kpis.orders?.pending || 0}</p>
           </div>
         </div>

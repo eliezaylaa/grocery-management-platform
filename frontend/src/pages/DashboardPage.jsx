@@ -7,11 +7,11 @@ import { productService } from '../services/productService';
 import { 
   ShoppingCart, AlertTriangle, DollarSign, TrendingUp, Package, 
   ShoppingBag, Clock, CheckCircle, CreditCard, ArrowRight,
-  Clipboard, BoxIcon, Users, Activity
+  Clipboard, Users
 } from 'lucide-react';
 import {
-  BarChart, Bar, PieChart, Pie, Cell,
-  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  PieChart, Pie, Cell, Tooltip,
+  XAxis, YAxis, CartesianGrid, ResponsiveContainer,
   AreaChart, Area
 } from 'recharts';
 
@@ -28,8 +28,6 @@ const ManagerDashboard = () => {
   const loadKPIs = async () => {
     try {
       const data = await reportService.getKPIs();
-      console.log('KPIs loaded:', data); // Debug
-      console.log('Payment distribution:', data.paymentDistribution); // Debug
       setKpis(data);
     } catch (error) {
       console.error('Failed to load KPIs:', error);
@@ -50,22 +48,20 @@ const ManagerDashboard = () => {
     return <div className="text-center py-20 text-gray-500">Failed to load dashboard</div>;
   }
 
-  // Payment method colors
+  // Payment method colors - Card purple, PayPal yellow, Cash green
   const PAYMENT_COLORS = {
     card: '#6366F1',
-    paypal: '#3B82F6', 
-    cash: '#10B981'
+    paypal: '#EAB308', 
+    cash: '#10B981',
+    unknown: '#6B7280'
   };
 
-  // Build payment data for pie chart
   const paymentData = (kpis.paymentDistribution || []).map(p => ({
     name: p.method ? p.method.charAt(0).toUpperCase() + p.method.slice(1) : 'Unknown',
     value: parseInt(p.count) || 0,
     total: parseFloat(p.total) || 0,
     color: PAYMENT_COLORS[p.method] || '#6B7280'
-  })).filter(p => p.value > 0);
-
-  console.log('Processed payment data:', paymentData); // Debug
+  }));
 
   const totalOrders = (kpis.orders?.completed || 0) + (kpis.orders?.pending || 0) + (kpis.orders?.failed || 0);
   const totalPaymentOrders = paymentData.reduce((sum, p) => sum + p.value, 0);
@@ -76,7 +72,7 @@ const ManagerDashboard = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold text-gray-900">Dashboard</h1>
-          <p className="text-sm text-gray-500 mt-1">Overview of your store performance</p>
+          <p className="text-sm text-gray-500 mt-1">Store overview</p>
         </div>
         <div className="text-sm text-gray-500">
           {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
@@ -92,7 +88,7 @@ const ManagerDashboard = () => {
               <p className="text-2xl font-semibold text-gray-900 mt-1">${kpis.totalRevenue?.value || '0'}</p>
               {kpis.totalRevenue?.change !== 0 && (
                 <p className={`text-xs mt-1 ${parseFloat(kpis.totalRevenue?.change) >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                  {parseFloat(kpis.totalRevenue?.change) >= 0 ? '↑' : '↓'} {Math.abs(kpis.totalRevenue?.change || 0)}% from last month
+                  {parseFloat(kpis.totalRevenue?.change) >= 0 ? '↑' : '↓'} {Math.abs(kpis.totalRevenue?.change || 0)}%
                 </p>
               )}
             </div>
@@ -120,7 +116,7 @@ const ManagerDashboard = () => {
             <div>
               <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Customers</p>
               <p className="text-2xl font-semibold text-gray-900 mt-1">{kpis.customers?.total || 0}</p>
-              <p className="text-xs text-emerald-600 mt-1">+{kpis.customers?.newThisMonth || 0} this month</p>
+              <p className="text-xs text-emerald-600 mt-1">+{kpis.customers?.newThisMonth || 0} new</p>
             </div>
             <div className="w-10 h-10 bg-violet-50 rounded-lg flex items-center justify-center">
               <Users size={20} className="text-violet-600" />
@@ -146,10 +142,7 @@ const ManagerDashboard = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Revenue Chart */}
         <div className="lg:col-span-2 bg-white rounded-lg shadow-sm border border-gray-100 p-5">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="font-medium text-gray-900">Revenue Overview</h2>
-            <span className="text-xs text-gray-500">Last 7 days</span>
-          </div>
+          <h2 className="font-medium text-gray-900 mb-4">Revenue (Last 7 Days)</h2>
           {kpis.dailySales && kpis.dailySales.length > 0 ? (
             <ResponsiveContainer width="100%" height={240}>
               <AreaChart data={kpis.dailySales}>
@@ -163,36 +156,34 @@ const ManagerDashboard = () => {
                 <XAxis dataKey="dayName" tick={{ fontSize: 12 }} stroke="#9CA3AF" />
                 <YAxis tick={{ fontSize: 12 }} stroke="#9CA3AF" tickFormatter={(v) => `$${v}`} />
                 <Tooltip 
-                  contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}
+                  contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb' }}
                   formatter={(value) => [`$${value}`, 'Revenue']}
                 />
                 <Area type="monotone" dataKey="revenue" stroke="#6366F1" strokeWidth={2} fill="url(#colorRevenue)" />
               </AreaChart>
             </ResponsiveContainer>
           ) : (
-            <div className="h-60 flex items-center justify-center text-gray-400">
-              No sales data available
-            </div>
+            <div className="h-60 flex items-center justify-center text-gray-400">No sales data</div>
           )}
         </div>
 
-        {/* Payment Methods Pie Chart */}
+        {/* Payment Methods Pie Chart - SOLID DISK */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-5">
-          <h2 className="font-medium text-gray-900 mb-2">Payment Methods</h2>
-          <p className="text-xs text-gray-500 mb-4">All time · All customers</p>
+          <h2 className="font-medium text-gray-900 mb-1">Payment Methods</h2>
+          <p className="text-xs text-gray-500 mb-4">All time purchases</p>
           
-          {paymentData.length > 0 ? (
+          {paymentData.length > 0 && totalPaymentOrders > 0 ? (
             <div>
               <div className="flex justify-center">
-                <PieChart width={200} height={200}>
+                <PieChart width={180} height={180}>
                   <Pie
                     data={paymentData}
-                    cx={100}
-                    cy={100}
-                    innerRadius={55}
-                    outerRadius={85}
+                    cx={90}
+                    cy={90}
+                    outerRadius={80}
                     dataKey="value"
-                    strokeWidth={0}
+                    strokeWidth={2}
+                    stroke="#fff"
                   >
                     {paymentData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
@@ -208,17 +199,14 @@ const ManagerDashboard = () => {
                 <p className="text-2xl font-semibold text-gray-900">{totalPaymentOrders}</p>
                 <p className="text-xs text-gray-500">Total Orders</p>
               </div>
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {paymentData.map((entry) => (
-                  <div key={entry.name} className="flex items-center justify-between">
+                  <div key={entry.name} className="flex items-center justify-between text-sm">
                     <div className="flex items-center gap-2">
                       <div className="w-3 h-3 rounded-full" style={{ backgroundColor: entry.color }}></div>
-                      <span className="text-sm text-gray-600">{entry.name}</span>
+                      <span className="text-gray-600">{entry.name}</span>
                     </div>
-                    <div className="text-right">
-                      <span className="text-sm font-medium text-gray-900">{entry.value}</span>
-                      <span className="text-xs text-gray-400 ml-2">${entry.total.toFixed(2)}</span>
-                    </div>
+                    <span className="font-medium">{entry.value} · ${entry.total.toFixed(0)}</span>
                   </div>
                 ))}
               </div>
@@ -227,7 +215,7 @@ const ManagerDashboard = () => {
             <div className="h-64 flex flex-col items-center justify-center text-gray-400">
               <CreditCard size={32} className="mb-2 text-gray-300" />
               <p className="text-sm">No payment data yet</p>
-              <p className="text-xs mt-1">Complete some orders to see stats</p>
+              <p className="text-xs mt-1">Complete orders to see stats</p>
             </div>
           )}
         </div>
@@ -239,9 +227,7 @@ const ManagerDashboard = () => {
         <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-5">
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-medium text-gray-900">Top Products</h2>
-            <button onClick={() => navigate('/products')} className="text-xs text-indigo-600 hover:text-indigo-700">
-              View all →
-            </button>
+            <button onClick={() => navigate('/products')} className="text-xs text-indigo-600 hover:text-indigo-700">View all →</button>
           </div>
           {kpis.topProducts && kpis.topProducts.length > 0 ? (
             <div className="space-y-3">
@@ -255,32 +241,25 @@ const ManagerDashboard = () => {
                       <span className="text-gray-500 whitespace-nowrap">{product.quantitySold} sold</span>
                     </div>
                     <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                      <div 
-                        className="h-full bg-indigo-500 rounded-full transition-all duration-500"
-                        style={{ width: `${percentage}%` }}
-                      ></div>
+                      <div className="h-full bg-indigo-500 rounded-full" style={{ width: `${percentage}%` }}></div>
                     </div>
                   </div>
                 );
               })}
             </div>
           ) : (
-            <div className="h-48 flex items-center justify-center text-gray-400">
-              No product data
-            </div>
+            <div className="h-48 flex items-center justify-center text-gray-400">No product data</div>
           )}
         </div>
 
         {/* Low Stock */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-5">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="font-medium text-gray-900">Low Stock Alert</h2>
-            <span className="text-xs bg-red-50 text-red-600 px-2 py-1 rounded-full">
-              {kpis.lowStock?.length || 0} items
-            </span>
+            <h2 className="font-medium text-gray-900">Low Stock</h2>
+            <span className="text-xs bg-red-50 text-red-600 px-2 py-1 rounded-full">{kpis.lowStock?.length || 0} items</span>
           </div>
           {kpis.lowStock && kpis.lowStock.length > 0 ? (
-            <div className="space-y-3 max-h-64 overflow-y-auto">
+            <div className="space-y-2 max-h-64 overflow-y-auto">
               {kpis.lowStock.slice(0, 5).map((product) => (
                 <div key={product.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50">
                   {product.pictureUrl ? (
@@ -294,9 +273,9 @@ const ManagerDashboard = () => {
                     <p className="text-sm font-medium text-gray-900 truncate">{product.name}</p>
                     <p className="text-xs text-gray-500">{product.brand}</p>
                   </div>
-                  <div className={`text-sm font-medium ${product.stockQuantity === 0 ? 'text-red-600' : 'text-amber-600'}`}>
+                  <span className={`text-sm font-medium ${product.stockQuantity === 0 ? 'text-red-600' : 'text-amber-600'}`}>
                     {product.stockQuantity === 0 ? 'Out' : product.stockQuantity}
-                  </div>
+                  </span>
                 </div>
               ))}
             </div>
@@ -304,7 +283,7 @@ const ManagerDashboard = () => {
             <div className="h-48 flex items-center justify-center text-gray-400">
               <div className="text-center">
                 <CheckCircle size={32} className="mx-auto text-emerald-400 mb-2" />
-                <p className="text-sm">All stocked up!</p>
+                <p className="text-sm">All stocked!</p>
               </div>
             </div>
           )}
@@ -315,26 +294,26 @@ const ManagerDashboard = () => {
       <div className="bg-gradient-to-r from-gray-900 to-gray-800 rounded-lg p-5 text-white">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
           <div>
-            <p className="text-gray-400 text-xs uppercase tracking-wide">Today</p>
+            <p className="text-gray-400 text-xs uppercase">Today</p>
             <p className="text-xl font-semibold mt-1">${kpis.today?.revenue || '0'}</p>
             <p className="text-gray-400 text-xs">{kpis.today?.orders || 0} orders</p>
           </div>
           <div>
-            <p className="text-gray-400 text-xs uppercase tracking-wide">24h Average</p>
+            <p className="text-gray-400 text-xs uppercase">24h Avg</p>
             <p className="text-xl font-semibold mt-1">${kpis.last24Hours?.averagePurchase || '0'}</p>
             <p className="text-gray-400 text-xs">per order</p>
           </div>
           <div>
-            <p className="text-gray-400 text-xs uppercase tracking-wide">This Week</p>
+            <p className="text-gray-400 text-xs uppercase">This Week</p>
             <p className="text-xl font-semibold mt-1">${kpis.salesGrowth?.thisWeek || '0'}</p>
             <p className={`text-xs ${parseFloat(kpis.salesGrowth?.growthRate) >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-              {parseFloat(kpis.salesGrowth?.growthRate) >= 0 ? '↑' : '↓'} {Math.abs(parseFloat(kpis.salesGrowth?.growthRate || 0))}% vs last week
+              {parseFloat(kpis.salesGrowth?.growthRate) >= 0 ? '↑' : '↓'} {Math.abs(parseFloat(kpis.salesGrowth?.growthRate || 0))}%
             </p>
           </div>
           <div>
-            <p className="text-gray-400 text-xs uppercase tracking-wide">Pending</p>
+            <p className="text-gray-400 text-xs uppercase">Pending</p>
             <p className="text-xl font-semibold mt-1">{kpis.orders?.pending || 0}</p>
-            <p className="text-gray-400 text-xs">awaiting approval</p>
+            <p className="text-gray-400 text-xs">awaiting</p>
           </div>
         </div>
       </div>
@@ -384,17 +363,13 @@ const EmployeeDashboard = () => {
   return (
     <div className="space-y-6">
       <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-100">
-        <h1 className="text-xl font-semibold text-gray-900">
-          Good {new Date().getHours() < 12 ? 'morning' : new Date().getHours() < 18 ? 'afternoon' : 'evening'}, {user?.firstName || 'there'}
-        </h1>
-        <p className="text-gray-500 text-sm mt-1">
-          {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
-        </p>
+        <h1 className="text-xl font-semibold text-gray-900">Hello, {user?.firstName || 'there'}</h1>
+        <p className="text-gray-500 text-sm mt-1">{new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</p>
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-white rounded-lg p-5 shadow-sm border border-gray-100">
-          <p className="text-xs font-medium text-gray-500 uppercase">Today's Orders</p>
+          <p className="text-xs font-medium text-gray-500 uppercase">Today</p>
           <p className="text-2xl font-semibold text-gray-900 mt-1">{todayOrders.length}</p>
         </div>
         <div className="bg-white rounded-lg p-5 shadow-sm border border-gray-100">
@@ -406,26 +381,23 @@ const EmployeeDashboard = () => {
           <p className="text-2xl font-semibold text-red-600 mt-1">{lowStockProducts.length}</p>
         </div>
         <div className="bg-white rounded-lg p-5 shadow-sm border border-gray-100">
-          <p className="text-xs font-medium text-gray-500 uppercase">Total Products</p>
+          <p className="text-xs font-medium text-gray-500 uppercase">Products</p>
           <p className="text-2xl font-semibold text-gray-900 mt-1">{products.length}</p>
         </div>
       </div>
 
       <div className="grid grid-cols-3 gap-4">
-        <button onClick={() => navigate('/products')} className="bg-white rounded-lg p-4 shadow-sm border border-gray-100 hover:border-gray-300 transition-colors text-left">
+        <button onClick={() => navigate('/products')} className="bg-white rounded-lg p-4 shadow-sm border border-gray-100 hover:border-gray-300 text-left">
           <Package size={20} className="text-gray-400 mb-2" />
           <p className="font-medium text-gray-900">Products</p>
-          <p className="text-xs text-gray-500">Manage inventory</p>
         </button>
-        <button onClick={() => navigate('/invoices')} className="bg-white rounded-lg p-4 shadow-sm border border-gray-100 hover:border-gray-300 transition-colors text-left">
+        <button onClick={() => navigate('/invoices')} className="bg-white rounded-lg p-4 shadow-sm border border-gray-100 hover:border-gray-300 text-left">
           <Clipboard size={20} className="text-gray-400 mb-2" />
           <p className="font-medium text-gray-900">Orders</p>
-          <p className="text-xs text-gray-500">View all orders</p>
         </button>
-        <button onClick={() => navigate('/shop')} className="bg-white rounded-lg p-4 shadow-sm border border-gray-100 hover:border-gray-300 transition-colors text-left">
+        <button onClick={() => navigate('/shop')} className="bg-white rounded-lg p-4 shadow-sm border border-gray-100 hover:border-gray-300 text-left">
           <ShoppingCart size={20} className="text-gray-400 mb-2" />
           <p className="font-medium text-gray-900">New Sale</p>
-          <p className="text-xs text-gray-500">Create order</p>
         </button>
       </div>
 
@@ -446,9 +418,7 @@ const EmployeeDashboard = () => {
                 <span className={`text-xs px-2 py-0.5 rounded-full ${
                   order.paymentStatus === 'completed' ? 'bg-emerald-50 text-emerald-600' :
                   order.paymentStatus === 'pending' ? 'bg-amber-50 text-amber-600' : 'bg-gray-50 text-gray-600'
-                }`}>
-                  {order.paymentStatus}
-                </span>
+                }`}>{order.paymentStatus}</span>
               </div>
             </div>
           ))}
@@ -493,8 +463,8 @@ const CustomerDashboard = () => {
   return (
     <div className="space-y-6">
       <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-100">
-        <h1 className="text-xl font-semibold text-gray-900">Welcome back, {user?.firstName || 'there'}</h1>
-        <p className="text-gray-500 text-sm mt-1">Track your orders and shopping activity</p>
+        <h1 className="text-xl font-semibold text-gray-900">Welcome, {user?.firstName || 'there'}</h1>
+        <p className="text-gray-500 text-sm mt-1">Your shopping dashboard</p>
       </div>
 
       <div className="grid grid-cols-3 gap-4">
@@ -503,7 +473,7 @@ const CustomerDashboard = () => {
           <p className="text-2xl font-semibold text-gray-900 mt-1">{orders.length}</p>
         </div>
         <div className="bg-white rounded-lg p-5 shadow-sm border border-gray-100">
-          <p className="text-xs font-medium text-gray-500 uppercase">Total Spent</p>
+          <p className="text-xs font-medium text-gray-500 uppercase">Spent</p>
           <p className="text-2xl font-semibold text-gray-900 mt-1">${totalSpent.toFixed(2)}</p>
         </div>
         <div className="bg-white rounded-lg p-5 shadow-sm border border-gray-100">
@@ -513,15 +483,13 @@ const CustomerDashboard = () => {
       </div>
 
       <div className="grid grid-cols-2 gap-4">
-        <button onClick={() => navigate('/shop')} className="bg-gray-900 text-white rounded-lg p-5 text-left hover:bg-gray-800 transition-colors">
+        <button onClick={() => navigate('/shop')} className="bg-gray-900 text-white rounded-lg p-5 text-left hover:bg-gray-800">
           <ShoppingCart size={24} className="mb-3" />
-          <p className="font-medium">Start Shopping</p>
-          <p className="text-gray-400 text-sm">Browse products</p>
+          <p className="font-medium">Shop Now</p>
         </button>
-        <button onClick={() => navigate('/my-orders')} className="bg-white rounded-lg p-5 shadow-sm border border-gray-100 text-left hover:border-gray-300 transition-colors">
+        <button onClick={() => navigate('/my-orders')} className="bg-white rounded-lg p-5 shadow-sm border border-gray-100 text-left hover:border-gray-300">
           <Package size={24} className="text-gray-400 mb-3" />
           <p className="font-medium text-gray-900">My Orders</p>
-          <p className="text-gray-500 text-sm">View history</p>
         </button>
       </div>
 
@@ -541,9 +509,7 @@ const CustomerDashboard = () => {
                   <p className="font-medium text-sm">${parseFloat(order.totalAmount).toFixed(2)}</p>
                   <span className={`text-xs px-2 py-0.5 rounded-full ${
                     order.paymentStatus === 'completed' ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'
-                  }`}>
-                    {order.paymentStatus}
-                  </span>
+                  }`}>{order.paymentStatus}</span>
                 </div>
               </div>
             ))}
