@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { productService } from '../services/productService';
+import { ProductDetailModal } from '../components/ProductDetailModal';
 import { Search, Filter, ShoppingCart, Plus, ChevronDown, X, Clock, Package } from 'lucide-react';
 
 export const ShopPage = () => {
@@ -10,6 +11,7 @@ export const ShopPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [cart, setCart] = useState([]);
+  const [selectedProduct, setSelectedProduct] = useState(null);
   
   const [filters, setFilters] = useState({
     category: '',
@@ -70,6 +72,20 @@ export const ShopPage = () => {
       newCart = [...cart, { ...product, quantity: 1 }];
     }
     
+    setCart(newCart);
+    localStorage.setItem('cart', JSON.stringify(newCart));
+    window.dispatchEvent(new Event('cartUpdated'));
+  };
+
+  const updateCartQuantity = (productId, newQuantity) => {
+    let newCart;
+    if (newQuantity <= 0) {
+      newCart = cart.filter(item => item.id !== productId);
+    } else {
+      newCart = cart.map(item => 
+        item.id === productId ? { ...item, quantity: newQuantity } : item
+      );
+    }
     setCart(newCart);
     localStorage.setItem('cart', JSON.stringify(newCart));
     window.dispatchEvent(new Event('cartUpdated'));
@@ -232,7 +248,7 @@ export const ShopPage = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {products.map((product) => (
               <div key={product.id} className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
-                <div className="relative">
+                <div className="relative cursor-pointer" onClick={() => setSelectedProduct(product)}>
                   {product.pictureUrl ? (
                     <img src={product.pictureUrl} alt={product.name} className="w-full h-48 object-cover" />
                   ) : (
@@ -252,9 +268,17 @@ export const ShopPage = () => {
                       Only {product.stockQuantity} left
                     </span>
                   )}
+                  <div className="absolute bottom-2 right-2 bg-black/60 text-white text-xs px-2 py-1 rounded opacity-0 hover:opacity-100 transition-opacity">
+                    Click for details
+                  </div>
                 </div>
                 <div className="p-4">
-                  <h3 className="font-semibold text-lg truncate">{product.name}</h3>
+                  <h3 
+                    className="font-semibold text-lg truncate cursor-pointer hover:text-blue-600"
+                    onClick={() => setSelectedProduct(product)}
+                  >
+                    {product.name}
+                  </h3>
                   <p className="text-sm text-gray-600 truncate">{product.brand}</p>
                   <p className="text-xs text-gray-500 mt-1 truncate">{product.category}</p>
                   
@@ -276,7 +300,6 @@ export const ShopPage = () => {
                     )}
                   </div>
 
-                  {/* Restock info for out of stock items */}
                   {product.stockQuantity === 0 && product.restockDate && (
                     <div className="mt-2 p-2 bg-orange-50 rounded-lg">
                       <p className="text-xs text-orange-700 flex items-center gap-1">
@@ -323,7 +346,6 @@ export const ShopPage = () => {
             ))}
           </div>
 
-          {/* Pagination */}
           {totalPages > 1 && (
             <div className="flex items-center justify-center gap-2 mt-6">
               <button
@@ -344,6 +366,17 @@ export const ShopPage = () => {
             </div>
           )}
         </>
+      )}
+
+      {/* Product Detail Modal */}
+      {selectedProduct && (
+        <ProductDetailModal
+          product={selectedProduct}
+          onClose={() => setSelectedProduct(null)}
+          cartQuantity={getCartQuantity(selectedProduct.id)}
+          onAddToCart={addToCart}
+          onUpdateQuantity={updateCartQuantity}
+        />
       )}
     </div>
   );

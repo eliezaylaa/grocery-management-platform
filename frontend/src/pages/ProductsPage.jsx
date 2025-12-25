@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { productService } from '../services/productService';
+import { ProductDetailModal } from '../components/ProductDetailModal';
 import { Plus, Edit, Trash2, RefreshCw, Search, Filter, X, Download, ChevronDown, Clock, Package } from 'lucide-react';
 
 export const ProductsPage = () => {
@@ -11,6 +12,7 @@ export const ProductsPage = () => {
   const [showModal, setShowModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
+  const [selectedProduct, setSelectedProduct] = useState(null);
   const [showFilters, setShowFilters] = useState(false);
   
   const [filters, setFilters] = useState({
@@ -239,7 +241,7 @@ export const ProductsPage = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {products.map((product) => (
               <div key={product.id} className="bg-white rounded-lg shadow-md overflow-hidden">
-                <div className="relative">
+                <div className="relative cursor-pointer" onClick={() => setSelectedProduct(product)}>
                   {product.pictureUrl ? (
                     <img src={product.pictureUrl} alt={product.name} className="w-full h-48 object-cover" />
                   ) : (
@@ -252,9 +254,17 @@ export const ProductsPage = () => {
                       Out of Stock
                     </span>
                   )}
+                  <div className="absolute bottom-2 right-2 bg-black/60 text-white text-xs px-2 py-1 rounded opacity-0 hover:opacity-100 transition-opacity">
+                    Click for details
+                  </div>
                 </div>
                 <div className="p-4">
-                  <h3 className="font-semibold text-lg truncate">{product.name}</h3>
+                  <h3 
+                    className="font-semibold text-lg truncate cursor-pointer hover:text-blue-600"
+                    onClick={() => setSelectedProduct(product)}
+                  >
+                    {product.name}
+                  </h3>
                   <p className="text-sm text-gray-600">{product.brand}</p>
                   <p className="text-sm text-gray-500 mt-1">{product.category}</p>
                   
@@ -267,7 +277,6 @@ export const ProductsPage = () => {
                     </span>
                   </div>
 
-                  {/* Restock Info */}
                   {product.stockQuantity === 0 && product.restockDate && (
                     <div className="mt-2 p-2 bg-orange-50 rounded-lg flex items-center gap-2">
                       <Clock size={14} className="text-orange-600" />
@@ -324,6 +333,14 @@ export const ProductsPage = () => {
             </button>
           </div>
         </>
+      )}
+
+      {/* Product Detail Modal */}
+      {selectedProduct && (
+        <ProductDetailModal
+          product={selectedProduct}
+          onClose={() => setSelectedProduct(null)}
+        />
       )}
 
       {showModal && (
@@ -408,7 +425,6 @@ const ProductModal = ({ product, onClose, onSave }) => {
             </div>
           </div>
 
-          {/* Restock Section */}
           <div className="border-t pt-4 mt-4">
             <h3 className="font-semibold text-gray-700 mb-3 flex items-center gap-2">
               <Clock size={18} />
@@ -417,22 +433,11 @@ const ProductModal = ({ product, onClose, onSave }) => {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Expected Restock Date</label>
-                <input 
-                  type="date" 
-                  value={formData.restockDate} 
-                  onChange={(e) => setFormData({...formData, restockDate: e.target.value})} 
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg" 
-                />
+                <input type="date" value={formData.restockDate} onChange={(e) => setFormData({...formData, restockDate: e.target.value})} className="w-full px-4 py-2 border border-gray-300 rounded-lg" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Restock Quantity</label>
-                <input 
-                  type="number" 
-                  value={formData.restockQuantity} 
-                  onChange={(e) => setFormData({...formData, restockQuantity: parseInt(e.target.value) || 0})} 
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg" 
-                  placeholder="Expected units"
-                />
+                <input type="number" value={formData.restockQuantity} onChange={(e) => setFormData({...formData, restockQuantity: parseInt(e.target.value) || 0})} className="w-full px-4 py-2 border border-gray-300 rounded-lg" placeholder="Expected units" />
               </div>
             </div>
           </div>
