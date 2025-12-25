@@ -2,19 +2,17 @@ import React, { useState, useEffect } from 'react';
 import { reportService } from '../services/reportService';
 import {
   DollarSign, TrendingUp, ShoppingCart, Users, Package,
-  AlertTriangle, CreditCard, ArrowUp, ArrowDown,
-  BarChart3, PieChart as PieChartIcon, Activity
+  AlertTriangle, Activity, RefreshCw
 } from 'lucide-react';
 import {
   BarChart, Bar, PieChart, Pie, Cell,
-  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   AreaChart, Area
 } from 'recharts';
 
 export const ReportsPage = () => {
   const [kpis, setKpis] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
 
   useEffect(() => {
     loadKPIs();
@@ -23,12 +21,10 @@ export const ReportsPage = () => {
   const loadKPIs = async () => {
     try {
       setLoading(true);
-      setError(null);
       const data = await reportService.getKPIs();
       setKpis(data);
     } catch (error) {
       console.error('Failed to load KPIs:', error);
-      setError('Failed to load reports. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -36,441 +32,351 @@ export const ReportsPage = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-96">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading reports...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="flex items-center justify-center min-h-96">
-        <div className="text-center">
-          <AlertTriangle size={48} className="text-blue-500 mx-auto mb-4" />
-          <p className="text-gray-600">{error}</p>
-          <button
-            onClick={loadKPIs}
-            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-          >
-            Retry
-          </button>
-        </div>
+      <div className="flex items-center justify-center h-96">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
       </div>
     );
   }
 
   if (!kpis) {
     return (
-      <div className="text-center py-20 text-gray-500">
-        No report data available
+      <div className="text-center py-20">
+        <p className="text-gray-500 mb-4">Failed to load reports</p>
+        <button onClick={loadKPIs} className="text-indigo-600 hover:text-indigo-700">Try again</button>
       </div>
     );
   }
 
-  // Blue color palette only
-  const BLUE_COLORS = ['#1e40af', '#2563eb', '#3b82f6', '#60a5fa', '#93c5fd', '#bfdbfe'];
+  // Payment method colors
+  const PAYMENT_COLORS = {
+    card: '#4F46E5',
+    paypal: '#0EA5E9', 
+    cash: '#10B981'
+  };
 
-  // Order status data for pie chart
+  const paymentData = kpis.paymentDistribution?.map(p => ({
+    name: p.method.charAt(0).toUpperCase() + p.method.slice(1),
+    value: p.count,
+    total: parseFloat(p.total),
+    color: PAYMENT_COLORS[p.method] || '#6B7280'
+  })) || [];
+
   const orderStatusData = [
-    { name: 'Completed', value: kpis.orders?.completed || 0 },
-    { name: 'Pending', value: kpis.orders?.pending || 0 },
-    { name: 'Failed', value: kpis.orders?.failed || 0 }
+    { name: 'Completed', value: kpis.orders?.completed || 0, color: '#10B981' },
+    { name: 'Pending', value: kpis.orders?.pending || 0, color: '#F59E0B' },
+    { name: 'Failed', value: kpis.orders?.failed || 0, color: '#EF4444' }
   ].filter(item => item.value > 0);
 
   return (
-    <div className="space-y-8">
-      <div className="flex justify-between items-center">
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Reports & Analytics</h1>
-          <p className="text-gray-600 mt-1">Comprehensive business insights</p>
+          <h1 className="text-2xl font-semibold text-gray-900">Reports</h1>
+          <p className="text-sm text-gray-500 mt-1">Analytics and insights</p>
         </div>
-        <button
+        <button 
           onClick={loadKPIs}
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
+          className="flex items-center gap-2 px-3 py-2 text-sm bg-white border border-gray-200 rounded-lg hover:bg-gray-50"
         >
-          <Activity size={18} />
+          <RefreshCw size={14} />
           Refresh
         </button>
       </div>
 
-      {/* Main KPI Cards - Blue Theme */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="bg-white p-6 rounded-xl shadow-md border-l-4 border-blue-600">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-500">Total Revenue</p>
-              <p className="text-2xl font-bold mt-1">${kpis.totalRevenue?.value || '0'}</p>
-              {kpis.totalRevenue?.change !== undefined && (
-                <div className={`flex items-center text-sm mt-1 ${parseFloat(kpis.totalRevenue.change) >= 0 ? 'text-blue-600' : 'text-red-600'}`}>
-                  {parseFloat(kpis.totalRevenue.change) >= 0 ? <ArrowUp size={14} /> : <ArrowDown size={14} />}
-                  <span>{Math.abs(kpis.totalRevenue.change)}% vs last month</span>
-                </div>
-              )}
+      {/* Stats Grid */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="bg-white rounded-lg p-5 shadow-sm border border-gray-100">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-emerald-50 rounded-lg flex items-center justify-center">
+              <DollarSign size={20} className="text-emerald-600" />
             </div>
-            <div className="bg-blue-100 p-3 rounded-full">
-              <DollarSign size={24} className="text-blue-600" />
+            <div>
+              <p className="text-xs text-gray-500">Total Revenue</p>
+              <p className="text-xl font-semibold">${kpis.totalRevenue?.value || '0'}</p>
             </div>
           </div>
         </div>
-
-        <div className="bg-white p-6 rounded-xl shadow-md border-l-4 border-blue-500">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-500">Average Transaction</p>
-              <p className="text-2xl font-bold mt-1">${kpis.averageTransaction?.value || '0'}</p>
-              <p className="text-sm text-gray-500 mt-1">Per order</p>
+        <div className="bg-white rounded-lg p-5 shadow-sm border border-gray-100">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center">
+              <ShoppingCart size={20} className="text-blue-600" />
             </div>
-            <div className="bg-blue-100 p-3 rounded-full">
-              <ShoppingCart size={24} className="text-blue-600" />
+            <div>
+              <p className="text-xs text-gray-500">Avg. Order</p>
+              <p className="text-xl font-semibold">${kpis.averageTransaction?.value || '0'}</p>
             </div>
           </div>
         </div>
-
-        <div className="bg-white p-6 rounded-xl shadow-md border-l-4 border-blue-400">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-500">Weekly Growth</p>
-              <p className="text-2xl font-bold mt-1">{kpis.salesGrowth?.growthRate || '0'}%</p>
-              <p className="text-sm text-gray-500 mt-1">vs last week</p>
+        <div className="bg-white rounded-lg p-5 shadow-sm border border-gray-100">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-violet-50 rounded-lg flex items-center justify-center">
+              <Users size={20} className="text-violet-600" />
             </div>
-            <div className="bg-blue-100 p-3 rounded-full">
-              <TrendingUp size={24} className="text-blue-600" />
+            <div>
+              <p className="text-xs text-gray-500">Customers</p>
+              <p className="text-xl font-semibold">{kpis.customers?.total || 0}</p>
             </div>
           </div>
         </div>
-
-        <div className="bg-white p-6 rounded-xl shadow-md border-l-4 border-blue-300">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-500">Total Customers</p>
-              <p className="text-2xl font-bold mt-1">{kpis.customers?.total || 0}</p>
-              <p className="text-sm text-blue-600 mt-1">+{kpis.customers?.newThisMonth || 0} this month</p>
+        <div className="bg-white rounded-lg p-5 shadow-sm border border-gray-100">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-amber-50 rounded-lg flex items-center justify-center">
+              <TrendingUp size={20} className="text-amber-600" />
             </div>
-            <div className="bg-blue-100 p-3 rounded-full">
-              <Users size={24} className="text-blue-600" />
+            <div>
+              <p className="text-xs text-gray-500">Weekly Growth</p>
+              <p className="text-xl font-semibold">{kpis.salesGrowth?.growthRate || 0}%</p>
             </div>
           </div>
-        </div>
-      </div>
-
-      {/* Secondary Stats - Blue Gradients */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="bg-gradient-to-r from-blue-600 to-blue-700 p-6 rounded-xl text-white">
-          <p className="text-blue-100 text-sm">Last 24 Hours Revenue</p>
-          <p className="text-3xl font-bold mt-1">${kpis.last24Hours?.revenue || '0'}</p>
-          <p className="text-blue-100 text-sm mt-2">{kpis.last24Hours?.orders || 0} orders</p>
-        </div>
-
-        <div className="bg-gradient-to-r from-blue-500 to-blue-600 p-6 rounded-xl text-white">
-          <p className="text-blue-100 text-sm">Avg Purchase (24h)</p>
-          <p className="text-3xl font-bold mt-1">${kpis.last24Hours?.averagePurchase || '0'}</p>
-          <p className="text-blue-100 text-sm mt-2">Per customer</p>
-        </div>
-
-        <div className="bg-gradient-to-r from-blue-400 to-blue-500 p-6 rounded-xl text-white">
-          <p className="text-blue-100 text-sm">Median Payment</p>
-          <p className="text-3xl font-bold mt-1">${kpis.medianPayment || '0'}</p>
-          <p className="text-blue-100 text-sm mt-2">All time</p>
-        </div>
-
-        <div className="bg-gradient-to-r from-blue-300 to-blue-400 p-6 rounded-xl text-white">
-          <p className="text-blue-100 text-sm">Today's Revenue</p>
-          <p className="text-3xl font-bold mt-1">${kpis.today?.revenue || '0'}</p>
-          <p className="text-blue-100 text-sm mt-2">{kpis.today?.orders || 0} orders</p>
         </div>
       </div>
 
       {/* Charts Row 1 */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Daily Sales Trend */}
-        <div className="bg-white p-6 rounded-xl shadow-md">
-          <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-            <BarChart3 size={20} className="text-blue-600" />
-            Sales Trend (Last 7 Days)
-          </h2>
-          {kpis.dailySales && kpis.dailySales.length > 0 ? (
-            <ResponsiveContainer width="100%" height={300}>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Revenue Chart */}
+        <div className="lg:col-span-2 bg-white rounded-lg shadow-sm border border-gray-100 p-5">
+          <h2 className="font-medium text-gray-900 mb-4">Revenue Trend</h2>
+          {kpis.dailySales?.length > 0 ? (
+            <ResponsiveContainer width="100%" height={280}>
               <AreaChart data={kpis.dailySales}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="dayName" />
-                <YAxis />
+                <defs>
+                  <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#4F46E5" stopOpacity={0.1}/>
+                    <stop offset="95%" stopColor="#4F46E5" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                <XAxis dataKey="dayName" tick={{ fontSize: 12 }} stroke="#9CA3AF" />
+                <YAxis tick={{ fontSize: 12 }} stroke="#9CA3AF" tickFormatter={(v) => `$${v}`} />
                 <Tooltip 
-                  formatter={(value, name) => [
-                    name === 'revenue' ? `$${value}` : value,
-                    name === 'revenue' ? 'Revenue' : 'Orders'
-                  ]}
+                  contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb' }}
+                  formatter={(value) => [`$${value}`, 'Revenue']}
                 />
-                <Legend />
-                <Area type="monotone" dataKey="revenue" stroke="#2563eb" fill="#93c5fd" name="Revenue ($)" />
+                <Area type="monotone" dataKey="revenue" stroke="#4F46E5" strokeWidth={2} fill="url(#colorRev)" />
               </AreaChart>
             </ResponsiveContainer>
           ) : (
-            <div className="h-64 flex items-center justify-center text-gray-500">
-              No sales data available
-            </div>
+            <div className="h-64 flex items-center justify-center text-gray-400">No data</div>
           )}
         </div>
 
-        {/* Orders by Day */}
-        <div className="bg-white p-6 rounded-xl shadow-md">
-          <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-            <Activity size={20} className="text-blue-600" />
-            Orders by Day
-          </h2>
-          {kpis.dailySales && kpis.dailySales.length > 0 ? (
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={kpis.dailySales}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="dayName" />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Bar dataKey="orders" fill="#3b82f6" name="Orders" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          ) : (
-            <div className="h-64 flex items-center justify-center text-gray-500">
-              No order data available
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Pie Charts Row - All Blue */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Payment Methods Pie Chart */}
-        <div className="bg-white p-6 rounded-xl shadow-md">
-          <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-            <CreditCard size={20} className="text-blue-600" />
-            Payment Methods
-          </h2>
-          {kpis.paymentDistribution && kpis.paymentDistribution.length > 0 ? (
+        {/* Payment Methods Donut */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-5">
+          <h2 className="font-medium text-gray-900 mb-4">Payment Methods</h2>
+          {paymentData.length > 0 ? (
             <div>
-              <ResponsiveContainer width="100%" height={220}>
+              <ResponsiveContainer width="100%" height={180}>
                 <PieChart>
                   <Pie
-                    data={kpis.paymentDistribution}
+                    data={paymentData}
                     cx="50%"
                     cy="50%"
-                    outerRadius={80}
-                    dataKey="count"
-                    label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
-                    labelLine={true}
+                    innerRadius={50}
+                    outerRadius={75}
+                    dataKey="value"
+                    strokeWidth={0}
                   >
-                    {kpis.paymentDistribution.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={BLUE_COLORS[index % BLUE_COLORS.length]} />
+                    {paymentData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
                   </Pie>
-                  <Tooltip formatter={(value) => [value, 'Orders']} />
+                  <Tooltip 
+                    contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb' }}
+                    formatter={(value) => [value, 'Orders']}
+                  />
                 </PieChart>
               </ResponsiveContainer>
-              <div className="flex flex-wrap justify-center gap-3 mt-2">
-                {kpis.paymentDistribution.map((entry, index) => (
-                  <div key={entry.method} className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: BLUE_COLORS[index % BLUE_COLORS.length] }}></div>
-                    <span className="text-sm text-gray-600 capitalize">{entry.method}</span>
-                    <span className="text-sm font-semibold">({entry.count})</span>
+              <div className="space-y-2">
+                {paymentData.map((entry) => (
+                  <div key={entry.name} className="flex items-center justify-between text-sm">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: entry.color }}></div>
+                      <span className="text-gray-600">{entry.name}</span>
+                    </div>
+                    <span className="font-medium">{entry.value} · ${entry.total.toFixed(0)}</span>
                   </div>
                 ))}
               </div>
             </div>
           ) : (
-            <div className="h-64 flex items-center justify-center text-gray-500">
-              <div className="text-center">
-                <PieChartIcon size={48} className="mx-auto text-gray-300 mb-2" />
-                <p>No payment data available</p>
-              </div>
-            </div>
+            <div className="h-64 flex items-center justify-center text-gray-400">No data</div>
+          )}
+        </div>
+      </div>
+
+      {/* Charts Row 2 */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Orders by Day */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-5">
+          <h2 className="font-medium text-gray-900 mb-4">Daily Orders</h2>
+          {kpis.dailySales?.length > 0 ? (
+            <ResponsiveContainer width="100%" height={200}>
+              <BarChart data={kpis.dailySales}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                <XAxis dataKey="dayName" tick={{ fontSize: 11 }} stroke="#9CA3AF" />
+                <YAxis tick={{ fontSize: 11 }} stroke="#9CA3AF" />
+                <Tooltip contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb' }} />
+                <Bar dataKey="orders" fill="#4F46E5" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="h-48 flex items-center justify-center text-gray-400">No data</div>
           )}
         </div>
 
-        {/* Order Status Pie Chart */}
-        <div className="bg-white p-6 rounded-xl shadow-md">
-          <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-            <PieChartIcon size={20} className="text-blue-600" />
-            Order Status
-          </h2>
+        {/* Order Status */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-5">
+          <h2 className="font-medium text-gray-900 mb-4">Order Status</h2>
           {orderStatusData.length > 0 ? (
             <div>
-              <ResponsiveContainer width="100%" height={220}>
+              <ResponsiveContainer width="100%" height={140}>
                 <PieChart>
                   <Pie
                     data={orderStatusData}
                     cx="50%"
                     cy="50%"
-                    outerRadius={80}
+                    innerRadius={40}
+                    outerRadius={60}
                     dataKey="value"
-                    label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
-                    labelLine={true}
+                    strokeWidth={0}
                   >
                     {orderStatusData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={BLUE_COLORS[index % BLUE_COLORS.length]} />
+                      <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
                   </Pie>
-                  <Tooltip formatter={(value) => [value, 'Orders']} />
+                  <Tooltip contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb' }} />
                 </PieChart>
               </ResponsiveContainer>
-              <div className="flex flex-wrap justify-center gap-3 mt-2">
-                {orderStatusData.map((entry, index) => (
-                  <div key={entry.name} className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: BLUE_COLORS[index % BLUE_COLORS.length] }}></div>
-                    <span className="text-sm text-gray-600">{entry.name}</span>
-                    <span className="text-sm font-semibold">({entry.value})</span>
+              <div className="space-y-2">
+                {orderStatusData.map((entry) => (
+                  <div key={entry.name} className="flex items-center justify-between text-sm">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: entry.color }}></div>
+                      <span className="text-gray-600">{entry.name}</span>
+                    </div>
+                    <span className="font-medium">{entry.value}</span>
                   </div>
                 ))}
               </div>
             </div>
           ) : (
-            <div className="h-64 flex items-center justify-center text-gray-500">
-              <div className="text-center">
-                <PieChartIcon size={48} className="mx-auto text-gray-300 mb-2" />
-                <p>No order data available</p>
-              </div>
-            </div>
+            <div className="h-48 flex items-center justify-center text-gray-400">No data</div>
           )}
         </div>
 
-        {/* Revenue by Payment Method Pie Chart */}
-        <div className="bg-white p-6 rounded-xl shadow-md">
-          <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-            <DollarSign size={20} className="text-blue-600" />
-            Revenue by Payment
-          </h2>
-          {kpis.paymentDistribution && kpis.paymentDistribution.length > 0 ? (
-            <div>
-              <ResponsiveContainer width="100%" height={220}>
-                <PieChart>
-                  <Pie
-                    data={kpis.paymentDistribution.map(p => ({ ...p, totalNum: parseFloat(p.total) || 0 }))}
-                    cx="50%"
-                    cy="50%"
-                    outerRadius={80}
-                    dataKey="totalNum"
-                    label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
-                    labelLine={true}
-                  >
-                    {kpis.paymentDistribution.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={BLUE_COLORS[index % BLUE_COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip formatter={(value) => [`$${parseFloat(value).toFixed(2)}`, 'Revenue']} />
-                </PieChart>
-              </ResponsiveContainer>
-              <div className="flex flex-wrap justify-center gap-3 mt-2">
-                {kpis.paymentDistribution.map((entry, index) => (
-                  <div key={entry.method} className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: BLUE_COLORS[index % BLUE_COLORS.length] }}></div>
-                    <span className="text-sm text-gray-600 capitalize">{entry.method}</span>
-                    <span className="text-sm font-semibold">(${entry.total})</span>
-                  </div>
-                ))}
-              </div>
+        {/* Quick Stats */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-5">
+          <h2 className="font-medium text-gray-900 mb-4">Quick Stats</h2>
+          <div className="space-y-4">
+            <div className="flex justify-between items-center pb-3 border-b border-gray-50">
+              <span className="text-sm text-gray-500">Today's Revenue</span>
+              <span className="font-semibold">${kpis.today?.revenue || '0'}</span>
             </div>
-          ) : (
-            <div className="h-64 flex items-center justify-center text-gray-500">
-              <div className="text-center">
-                <PieChartIcon size={48} className="mx-auto text-gray-300 mb-2" />
-                <p>No revenue data available</p>
-              </div>
+            <div className="flex justify-between items-center pb-3 border-b border-gray-50">
+              <span className="text-sm text-gray-500">Today's Orders</span>
+              <span className="font-semibold">{kpis.today?.orders || 0}</span>
             </div>
-          )}
+            <div className="flex justify-between items-center pb-3 border-b border-gray-50">
+              <span className="text-sm text-gray-500">24h Average</span>
+              <span className="font-semibold">${kpis.last24Hours?.averagePurchase || '0'}</span>
+            </div>
+            <div className="flex justify-between items-center pb-3 border-b border-gray-50">
+              <span className="text-sm text-gray-500">Median Payment</span>
+              <span className="font-semibold">${kpis.medianPayment || '0'}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-sm text-gray-500">New Customers</span>
+              <span className="font-semibold text-emerald-600">+{kpis.customers?.newThisMonth || 0}</span>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Top Products & Low Stock */}
+      {/* Bottom Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Top Products */}
-        <div className="bg-white p-6 rounded-xl shadow-md">
-          <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-            <Package size={20} className="text-blue-600" />
-            Top Selling Products
-          </h2>
-          {kpis.topProducts && kpis.topProducts.length > 0 ? (
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={kpis.topProducts.slice(0, 5)} layout="vertical">
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis type="number" />
-                <YAxis dataKey="name" type="category" width={120} tick={{ fontSize: 12 }} />
-                <Tooltip 
-                  formatter={(value, name) => [value, name === 'quantitySold' ? 'Units Sold' : name]}
-                />
-                <Bar dataKey="quantitySold" fill="#3b82f6" name="Units Sold" radius={[0, 4, 4, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          ) : (
-            <div className="h-64 flex items-center justify-center text-gray-500">
-              <div className="text-center">
-                <Package size={48} className="mx-auto text-gray-300 mb-2" />
-                <p>No product data available</p>
-              </div>
+        <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-5">
+          <h2 className="font-medium text-gray-900 mb-4">Top Products</h2>
+          {kpis.topProducts?.length > 0 ? (
+            <div className="space-y-3">
+              {kpis.topProducts.slice(0, 5).map((product, index) => {
+                const maxQty = Math.max(...kpis.topProducts.slice(0, 5).map(p => p.quantitySold));
+                const percentage = (product.quantitySold / maxQty) * 100;
+                return (
+                  <div key={product.id || index}>
+                    <div className="flex items-center justify-between text-sm mb-1">
+                      <span className="text-gray-700 truncate pr-4">{product.name}</span>
+                      <span className="text-gray-500 whitespace-nowrap">{product.quantitySold} sold</span>
+                    </div>
+                    <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                      <div className="h-full bg-indigo-500 rounded-full" style={{ width: `${percentage}%` }}></div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
+          ) : (
+            <div className="h-48 flex items-center justify-center text-gray-400">No data</div>
           )}
         </div>
 
-        {/* Low Stock Alert */}
-        <div className="bg-white p-6 rounded-xl shadow-md">
-          <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-            <AlertTriangle className="text-blue-500" />
-            Low Stock Products
-          </h2>
-          {kpis.lowStock && kpis.lowStock.length > 0 ? (
-            <div className="space-y-3 max-h-72 overflow-y-auto">
+        {/* Low Stock */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-5">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-medium text-gray-900">Low Stock</h2>
+            {kpis.lowStock?.length > 0 && (
+              <span className="text-xs bg-red-50 text-red-600 px-2 py-1 rounded-full">{kpis.lowStock.length} items</span>
+            )}
+          </div>
+          {kpis.lowStock?.length > 0 ? (
+            <div className="space-y-2 max-h-64 overflow-y-auto">
               {kpis.lowStock.map((product) => (
-                <div key={product.id} className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-200">
-                  <div className="flex items-center gap-3">
-                    {product.pictureUrl ? (
-                      <img src={product.pictureUrl} alt={product.name} className="w-10 h-10 rounded object-cover" />
-                    ) : (
-                      <div className="w-10 h-10 bg-gray-200 rounded flex items-center justify-center">
-                        <Package size={16} className="text-gray-400" />
-                      </div>
-                    )}
-                    <div>
-                      <p className="font-medium text-sm">{product.name}</p>
-                      <p className="text-xs text-gray-500">{product.brand}</p>
+                <div key={product.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50">
+                  {product.pictureUrl ? (
+                    <img src={product.pictureUrl} alt="" className="w-10 h-10 rounded object-cover" />
+                  ) : (
+                    <div className="w-10 h-10 bg-gray-100 rounded flex items-center justify-center">
+                      <Package size={16} className="text-gray-400" />
                     </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-900 truncate">{product.name}</p>
+                    <p className="text-xs text-gray-500">{product.brand}</p>
                   </div>
-                  <span className="font-bold text-sm text-blue-600">
-                    {product.stockQuantity === 0 ? 'Out of Stock' : `${product.stockQuantity} left`}
+                  <span className={`text-sm font-medium ${product.stockQuantity === 0 ? 'text-red-600' : 'text-amber-600'}`}>
+                    {product.stockQuantity}
                   </span>
                 </div>
               ))}
             </div>
           ) : (
-            <div className="text-center py-8 text-gray-500">
-              <Package size={48} className="mx-auto text-gray-300 mb-2" />
-              <p>All products are well stocked!</p>
-            </div>
+            <div className="h-48 flex items-center justify-center text-gray-400">All stocked</div>
           )}
         </div>
       </div>
 
       {/* Weekly Comparison */}
-      <div className="bg-white p-6 rounded-xl shadow-md">
-        <h2 className="text-xl font-semibold mb-4">Weekly Revenue Comparison</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="text-center p-6 bg-blue-50 rounded-lg border-2 border-blue-200">
-            <p className="text-gray-600 font-medium">This Week</p>
-            <p className="text-4xl font-bold text-blue-600 mt-2">${kpis.salesGrowth?.thisWeek || '0'}</p>
-            <p className="text-sm text-gray-500 mt-2">Current period</p>
+      <div className="bg-gradient-to-r from-gray-900 to-gray-800 rounded-lg p-6 text-white">
+        <h2 className="font-medium mb-4">Weekly Comparison</h2>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+          <div>
+            <p className="text-gray-400 text-xs uppercase">This Week</p>
+            <p className="text-2xl font-semibold mt-1">${kpis.salesGrowth?.thisWeek || '0'}</p>
           </div>
-          <div className="text-center p-6 bg-gray-50 rounded-lg border-2 border-gray-200">
-            <p className="text-gray-600 font-medium">Last Week</p>
-            <p className="text-4xl font-bold text-gray-600 mt-2">${kpis.salesGrowth?.lastWeek || '0'}</p>
-            <p className="text-sm text-gray-500 mt-2">Previous period</p>
+          <div>
+            <p className="text-gray-400 text-xs uppercase">Last Week</p>
+            <p className="text-2xl font-semibold mt-1">${kpis.salesGrowth?.lastWeek || '0'}</p>
           </div>
-        </div>
-        <div className="mt-6 text-center">
-          <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full ${
-            parseFloat(kpis.salesGrowth?.growthRate || 0) >= 0 
-              ? 'bg-blue-100 text-blue-700' 
-              : 'bg-red-100 text-red-700'
-          }`}>
-            {parseFloat(kpis.salesGrowth?.growthRate || 0) >= 0 ? <ArrowUp size={18} /> : <ArrowDown size={18} />}
-            <span className="font-semibold">{Math.abs(parseFloat(kpis.salesGrowth?.growthRate || 0))}% {parseFloat(kpis.salesGrowth?.growthRate || 0) >= 0 ? 'Growth' : 'Decline'}</span>
+          <div>
+            <p className="text-gray-400 text-xs uppercase">Growth</p>
+            <p className={`text-2xl font-semibold mt-1 ${parseFloat(kpis.salesGrowth?.growthRate) >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+              {parseFloat(kpis.salesGrowth?.growthRate) >= 0 ? '+' : ''}{kpis.salesGrowth?.growthRate || 0}%
+            </p>
+          </div>
+          <div>
+            <p className="text-gray-400 text-xs uppercase">Pending Orders</p>
+            <p className="text-2xl font-semibold mt-1">{kpis.orders?.pending || 0}</p>
           </div>
         </div>
       </div>

@@ -7,11 +7,11 @@ import { productService } from '../services/productService';
 import { 
   ShoppingCart, AlertTriangle, DollarSign, TrendingUp, Package, 
   ShoppingBag, Clock, CheckCircle, CreditCard, ArrowRight,
-  Clipboard, BoxIcon, Users, Eye, Truck, Activity, BarChart3
+  Clipboard, BoxIcon, Users, Activity, Wallet, Banknote
 } from 'lucide-react';
 import {
   BarChart, Bar, PieChart, Pie, Cell,
-  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   AreaChart, Area
 } from 'recharts';
 
@@ -37,307 +37,293 @@ const ManagerDashboard = () => {
   };
 
   if (loading) {
-    return <div className="text-center py-20">Loading dashboard...</div>;
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+      </div>
+    );
   }
 
   if (!kpis) {
-    return <div className="text-center py-20">Failed to load dashboard data</div>;
+    return <div className="text-center py-20 text-gray-500">Failed to load dashboard</div>;
   }
 
-  // Blue color palette
-  const BLUE_COLORS = ['#1e40af', '#2563eb', '#3b82f6', '#60a5fa', '#93c5fd', '#bfdbfe'];
+  // Payment method colors - distinct professional colors
+  const PAYMENT_COLORS = {
+    card: '#4F46E5',    // Indigo
+    paypal: '#0EA5E9',  // Sky blue
+    cash: '#10B981'     // Emerald
+  };
 
-  // Order status data for pie chart
-  const orderStatusData = [
-    { name: 'Completed', value: kpis.orders?.completed || 0 },
-    { name: 'Pending', value: kpis.orders?.pending || 0 },
-    { name: 'Failed', value: kpis.orders?.failed || 0 }
-  ].filter(item => item.value > 0);
+  const paymentData = kpis.paymentDistribution?.map(p => ({
+    name: p.method.charAt(0).toUpperCase() + p.method.slice(1),
+    value: p.count,
+    total: parseFloat(p.total),
+    color: PAYMENT_COLORS[p.method] || '#6B7280'
+  })) || [];
+
+  const totalOrders = (kpis.orders?.completed || 0) + (kpis.orders?.pending || 0) + (kpis.orders?.failed || 0);
 
   return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-        <p className="text-gray-600 mt-2">Welcome back! Here's your store overview.</p>
-      </div>
-
-      {/* Main KPI Cards - All Blue Theme */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="bg-white p-6 rounded-xl shadow-md border-l-4 border-blue-600">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-500">Total Revenue</p>
-              <p className="text-2xl font-bold mt-1">${kpis.totalRevenue?.value || '0'}</p>
-              <p className={`text-sm mt-1 ${parseFloat(kpis.totalRevenue?.change) >= 0 ? 'text-blue-600' : 'text-red-600'}`}>
-                {parseFloat(kpis.totalRevenue?.change) >= 0 ? '+' : ''}{kpis.totalRevenue?.change || 0}% vs last month
-              </p>
-            </div>
-            <div className="bg-blue-100 p-3 rounded-full">
-              <DollarSign size={24} className="text-blue-600" />
-            </div>
-          </div>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold text-gray-900">Dashboard</h1>
+          <p className="text-sm text-gray-500 mt-1">Overview of your store performance</p>
         </div>
-
-        <div className="bg-white p-6 rounded-xl shadow-md border-l-4 border-blue-500">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-500">Avg Transaction</p>
-              <p className="text-2xl font-bold mt-1">${kpis.averageTransaction?.value || '0'}</p>
-              <p className="text-sm text-gray-500 mt-1">Per order</p>
-            </div>
-            <div className="bg-blue-100 p-3 rounded-full">
-              <ShoppingCart size={24} className="text-blue-600" />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white p-6 rounded-xl shadow-md border-l-4 border-blue-400">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-500">Sales Growth</p>
-              <p className="text-2xl font-bold mt-1">{kpis.salesGrowth?.growthRate || '0'}%</p>
-              <p className="text-sm text-gray-500 mt-1">vs last week</p>
-            </div>
-            <div className="bg-blue-100 p-3 rounded-full">
-              <TrendingUp size={24} className="text-blue-600" />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white p-6 rounded-xl shadow-md border-l-4 border-blue-300 cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate('/products?lowStock=true')}>
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-500">Low Stock Items</p>
-              <p className="text-2xl font-bold mt-1">{kpis.lowStock?.length || 0}</p>
-              <p className="text-sm text-blue-600 mt-1">Need attention</p>
-            </div>
-            <div className="bg-blue-100 p-3 rounded-full">
-              <AlertTriangle size={24} className="text-blue-600" />
-            </div>
-          </div>
+        <div className="text-sm text-gray-500">
+          {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
         </div>
       </div>
 
-      {/* Secondary Stats Row - Blue Gradient Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="bg-gradient-to-r from-blue-600 to-blue-700 p-6 rounded-xl text-white">
+      {/* Stats Grid */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="bg-white rounded-lg p-5 shadow-sm border border-gray-100">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-blue-100 text-sm">Last 24 Hours</p>
-              <p className="text-3xl font-bold mt-1">${kpis.last24Hours?.revenue || '0'}</p>
-              <p className="text-blue-100 text-sm mt-1">{kpis.last24Hours?.orders || 0} orders</p>
+              <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Revenue</p>
+              <p className="text-2xl font-semibold text-gray-900 mt-1">${kpis.totalRevenue?.value || '0'}</p>
+              {kpis.totalRevenue?.change !== 0 && (
+                <p className={`text-xs mt-1 ${parseFloat(kpis.totalRevenue?.change) >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                  {parseFloat(kpis.totalRevenue?.change) >= 0 ? '↑' : '↓'} {Math.abs(kpis.totalRevenue?.change)}% from last month
+                </p>
+              )}
             </div>
-            <Activity size={32} className="text-blue-200" />
+            <div className="w-10 h-10 bg-emerald-50 rounded-lg flex items-center justify-center">
+              <DollarSign size={20} className="text-emerald-600" />
+            </div>
           </div>
         </div>
 
-        <div className="bg-gradient-to-r from-blue-500 to-blue-600 p-6 rounded-xl text-white">
+        <div className="bg-white rounded-lg p-5 shadow-sm border border-gray-100">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-blue-100 text-sm">Avg Purchase (24h)</p>
-              <p className="text-3xl font-bold mt-1">${kpis.last24Hours?.averagePurchase || '0'}</p>
-              <p className="text-blue-100 text-sm mt-1">Per customer</p>
+              <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Orders</p>
+              <p className="text-2xl font-semibold text-gray-900 mt-1">{totalOrders}</p>
+              <p className="text-xs text-gray-500 mt-1">{kpis.orders?.pending || 0} pending</p>
             </div>
-            <BarChart3 size={32} className="text-blue-200" />
+            <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center">
+              <ShoppingBag size={20} className="text-blue-600" />
+            </div>
           </div>
         </div>
 
-        <div className="bg-gradient-to-r from-blue-400 to-blue-500 p-6 rounded-xl text-white">
+        <div className="bg-white rounded-lg p-5 shadow-sm border border-gray-100">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-blue-100 text-sm">Median Payment</p>
-              <p className="text-3xl font-bold mt-1">${kpis.medianPayment || '0'}</p>
-              <p className="text-blue-100 text-sm mt-1">All time</p>
+              <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Customers</p>
+              <p className="text-2xl font-semibold text-gray-900 mt-1">{kpis.customers?.total || 0}</p>
+              <p className="text-xs text-emerald-600 mt-1">+{kpis.customers?.newThisMonth || 0} this month</p>
             </div>
-            <CreditCard size={32} className="text-blue-200" />
+            <div className="w-10 h-10 bg-violet-50 rounded-lg flex items-center justify-center">
+              <Users size={20} className="text-violet-600" />
+            </div>
           </div>
         </div>
 
-        <div className="bg-gradient-to-r from-blue-300 to-blue-400 p-6 rounded-xl text-white">
+        <div className="bg-white rounded-lg p-5 shadow-sm border border-gray-100">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-blue-100 text-sm">Customers</p>
-              <p className="text-3xl font-bold mt-1">{kpis.customers?.total || 0}</p>
-              <p className="text-blue-100 text-sm mt-1">+{kpis.customers?.newThisMonth || 0} this month</p>
+              <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Avg. Order</p>
+              <p className="text-2xl font-semibold text-gray-900 mt-1">${kpis.averageTransaction?.value || '0'}</p>
+              <p className="text-xs text-gray-500 mt-1">Median: ${kpis.medianPayment || '0'}</p>
             </div>
-            <Users size={32} className="text-blue-200" />
+            <div className="w-10 h-10 bg-amber-50 rounded-lg flex items-center justify-center">
+              <TrendingUp size={20} className="text-amber-600" />
+            </div>
           </div>
         </div>
       </div>
 
       {/* Charts Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Daily Sales Trend */}
-        <div className="bg-white p-6 rounded-xl shadow-md">
-          <h2 className="text-xl font-semibold mb-4">Sales Trend (Last 7 Days)</h2>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Revenue Chart */}
+        <div className="lg:col-span-2 bg-white rounded-lg shadow-sm border border-gray-100 p-5">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-medium text-gray-900">Revenue Overview</h2>
+            <span className="text-xs text-gray-500">Last 7 days</span>
+          </div>
           {kpis.dailySales && kpis.dailySales.length > 0 ? (
-            <ResponsiveContainer width="100%" height={300}>
+            <ResponsiveContainer width="100%" height={240}>
               <AreaChart data={kpis.dailySales}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="dayName" />
-                <YAxis />
+                <defs>
+                  <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#4F46E5" stopOpacity={0.1}/>
+                    <stop offset="95%" stopColor="#4F46E5" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                <XAxis dataKey="dayName" tick={{ fontSize: 12 }} stroke="#9CA3AF" />
+                <YAxis tick={{ fontSize: 12 }} stroke="#9CA3AF" tickFormatter={(v) => `$${v}`} />
                 <Tooltip 
-                  formatter={(value, name) => [
-                    name === 'revenue' ? `$${value}` : value,
-                    name === 'revenue' ? 'Revenue' : 'Orders'
-                  ]}
+                  contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}
+                  formatter={(value) => [`$${value}`, 'Revenue']}
                 />
-                <Area type="monotone" dataKey="revenue" stroke="#2563eb" fill="#93c5fd" name="revenue" />
+                <Area type="monotone" dataKey="revenue" stroke="#4F46E5" strokeWidth={2} fill="url(#colorRevenue)" />
               </AreaChart>
             </ResponsiveContainer>
           ) : (
-            <div className="h-64 flex items-center justify-center text-gray-500">
-              No sales data yet
+            <div className="h-60 flex items-center justify-center text-gray-400">
+              No sales data available
             </div>
           )}
         </div>
 
-        {/* Top Products */}
-        <div className="bg-white p-6 rounded-xl shadow-md">
-          <h2 className="text-xl font-semibold mb-4">Top Selling Products</h2>
-          {kpis.topProducts && kpis.topProducts.length > 0 ? (
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={kpis.topProducts.slice(0, 5)} layout="vertical">
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis type="number" />
-                <YAxis dataKey="name" type="category" width={100} tick={{ fontSize: 12 }} />
-                <Tooltip />
-                <Bar dataKey="quantitySold" fill="#3b82f6" name="Units Sold" radius={[0, 4, 4, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          ) : (
-            <div className="h-64 flex items-center justify-center text-gray-500">
-              No sales data yet
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Pie Charts Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Payment Distribution */}
-        <div className="bg-white p-6 rounded-xl shadow-md">
-          <h2 className="text-xl font-semibold mb-4">Payment Methods</h2>
-          {kpis.paymentDistribution && kpis.paymentDistribution.length > 0 ? (
+        {/* Payment Methods Pie Chart */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-5">
+          <h2 className="font-medium text-gray-900 mb-4">Payment Methods</h2>
+          {paymentData.length > 0 ? (
             <div>
-              <ResponsiveContainer width="100%" height={200}>
+              <ResponsiveContainer width="100%" height={180}>
                 <PieChart>
                   <Pie
-                    data={kpis.paymentDistribution}
+                    data={paymentData}
                     cx="50%"
                     cy="50%"
-                    outerRadius={70}
-                    dataKey="count"
-                    label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
-                  >
-                    {kpis.paymentDistribution.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={BLUE_COLORS[index % BLUE_COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip formatter={(value) => [value, 'Orders']} />
-                </PieChart>
-              </ResponsiveContainer>
-              <div className="flex flex-wrap justify-center gap-3 mt-2">
-                {kpis.paymentDistribution.map((entry, index) => (
-                  <div key={entry.method} className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: BLUE_COLORS[index % BLUE_COLORS.length] }}></div>
-                    <span className="text-sm text-gray-600 capitalize">{entry.method}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ) : (
-            <div className="h-64 flex items-center justify-center text-gray-500">
-              No payment data yet
-            </div>
-          )}
-        </div>
-
-        {/* Order Status */}
-        <div className="bg-white p-6 rounded-xl shadow-md">
-          <h2 className="text-xl font-semibold mb-4">Order Status</h2>
-          {orderStatusData.length > 0 ? (
-            <div>
-              <ResponsiveContainer width="100%" height={200}>
-                <PieChart>
-                  <Pie
-                    data={orderStatusData}
-                    cx="50%"
-                    cy="50%"
+                    innerRadius={45}
                     outerRadius={70}
                     dataKey="value"
-                    label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
+                    strokeWidth={0}
                   >
-                    {orderStatusData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={BLUE_COLORS[index % BLUE_COLORS.length]} />
+                    {paymentData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
                   </Pie>
-                  <Tooltip formatter={(value) => [value, 'Orders']} />
+                  <Tooltip 
+                    contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb' }}
+                    formatter={(value, name, props) => [value, `${props.payload.name} orders`]}
+                  />
                 </PieChart>
               </ResponsiveContainer>
-              <div className="flex flex-wrap justify-center gap-3 mt-2">
-                {orderStatusData.map((entry, index) => (
-                  <div key={entry.name} className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: BLUE_COLORS[index % BLUE_COLORS.length] }}></div>
-                    <span className="text-sm text-gray-600">{entry.name}</span>
+              <div className="space-y-2 mt-2">
+                {paymentData.map((entry) => (
+                  <div key={entry.name} className="flex items-center justify-between text-sm">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: entry.color }}></div>
+                      <span className="text-gray-600">{entry.name}</span>
+                    </div>
+                    <div className="text-right">
+                      <span className="font-medium text-gray-900">{entry.value}</span>
+                      <span className="text-gray-400 ml-1">· ${entry.total.toFixed(0)}</span>
+                    </div>
                   </div>
                 ))}
               </div>
             </div>
           ) : (
-            <div className="h-64 flex items-center justify-center text-gray-500">
-              No order data yet
+            <div className="h-60 flex items-center justify-center text-gray-400">
+              No payment data
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Bottom Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Top Products - Horizontal Bars */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-5">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-medium text-gray-900">Top Products</h2>
+            <button onClick={() => navigate('/products')} className="text-xs text-indigo-600 hover:text-indigo-700">
+              View all →
+            </button>
+          </div>
+          {kpis.topProducts && kpis.topProducts.length > 0 ? (
+            <div className="space-y-3">
+              {kpis.topProducts.slice(0, 5).map((product, index) => {
+                const maxQty = Math.max(...kpis.topProducts.slice(0, 5).map(p => p.quantitySold));
+                const percentage = (product.quantitySold / maxQty) * 100;
+                return (
+                  <div key={product.id || index}>
+                    <div className="flex items-center justify-between text-sm mb-1">
+                      <span className="text-gray-700 truncate pr-4">{product.name}</span>
+                      <span className="text-gray-500 whitespace-nowrap">{product.quantitySold} sold</span>
+                    </div>
+                    <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-indigo-500 rounded-full transition-all duration-500"
+                        style={{ width: `${percentage}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="h-48 flex items-center justify-center text-gray-400">
+              No product data
             </div>
           )}
         </div>
 
-        {/* Today's Stats */}
-        <div className="bg-white p-6 rounded-xl shadow-md">
-          <h2 className="text-xl font-semibold mb-4">Today's Performance</h2>
-          <div className="text-center py-4">
-            <p className="text-5xl font-bold text-blue-600">${kpis.today?.revenue || '0'}</p>
-            <p className="text-gray-500 mt-2">Revenue Today</p>
-            <div className="mt-4 pt-4 border-t">
-              <p className="text-3xl font-bold text-gray-800">{kpis.today?.orders || 0}</p>
-              <p className="text-gray-500">Orders Today</p>
-            </div>
+        {/* Low Stock */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-5">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-medium text-gray-900">Low Stock Alert</h2>
+            <span className="text-xs bg-red-50 text-red-600 px-2 py-1 rounded-full">
+              {kpis.lowStock?.length || 0} items
+            </span>
           </div>
+          {kpis.lowStock && kpis.lowStock.length > 0 ? (
+            <div className="space-y-3 max-h-64 overflow-y-auto">
+              {kpis.lowStock.slice(0, 5).map((product) => (
+                <div key={product.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50">
+                  {product.pictureUrl ? (
+                    <img src={product.pictureUrl} alt="" className="w-10 h-10 rounded-lg object-cover" />
+                  ) : (
+                    <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
+                      <Package size={16} className="text-gray-400" />
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-900 truncate">{product.name}</p>
+                    <p className="text-xs text-gray-500">{product.brand}</p>
+                  </div>
+                  <div className={`text-sm font-medium ${product.stockQuantity === 0 ? 'text-red-600' : 'text-amber-600'}`}>
+                    {product.stockQuantity === 0 ? 'Out' : product.stockQuantity}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="h-48 flex items-center justify-center text-gray-400">
+              <div className="text-center">
+                <CheckCircle size={32} className="mx-auto text-emerald-400 mb-2" />
+                <p className="text-sm">All stocked up!</p>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Low Stock Alert */}
-      {kpis.lowStock && kpis.lowStock.length > 0 && (
-        <div className="bg-white p-6 rounded-xl shadow-md">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold flex items-center gap-2">
-              <AlertTriangle className="text-blue-500" />
-              Low Stock Alert
-            </h2>
-            <button
-              onClick={() => navigate('/products?lowStock=true')}
-              className="text-blue-600 hover:text-blue-800 text-sm flex items-center gap-1"
-            >
-              View All <ArrowRight size={16} />
-            </button>
+      {/* Quick Stats Bar */}
+      <div className="bg-gradient-to-r from-gray-900 to-gray-800 rounded-lg p-5 text-white">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+          <div>
+            <p className="text-gray-400 text-xs uppercase tracking-wide">Today</p>
+            <p className="text-xl font-semibold mt-1">${kpis.today?.revenue || '0'}</p>
+            <p className="text-gray-400 text-xs">{kpis.today?.orders || 0} orders</p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {kpis.lowStock.slice(0, 4).map((product) => (
-              <div key={product.id} className="border border-blue-200 rounded-lg p-4 bg-blue-50">
-                {product.pictureUrl ? (
-                  <img src={product.pictureUrl} alt={product.name} className="w-full h-24 object-cover rounded mb-2" />
-                ) : (
-                  <div className="w-full h-24 bg-gray-200 rounded mb-2 flex items-center justify-center">
-                    <Package size={32} className="text-gray-400" />
-                  </div>
-                )}
-                <h3 className="font-semibold truncate">{product.name}</h3>
-                <p className="text-sm text-gray-600">{product.brand}</p>
-                <p className="text-blue-600 font-bold mt-2">Only {product.stockQuantity} left!</p>
-              </div>
-            ))}
+          <div>
+            <p className="text-gray-400 text-xs uppercase tracking-wide">24h Average</p>
+            <p className="text-xl font-semibold mt-1">${kpis.last24Hours?.averagePurchase || '0'}</p>
+            <p className="text-gray-400 text-xs">per order</p>
+          </div>
+          <div>
+            <p className="text-gray-400 text-xs uppercase tracking-wide">This Week</p>
+            <p className="text-xl font-semibold mt-1">${kpis.salesGrowth?.thisWeek || '0'}</p>
+            <p className={`text-xs ${parseFloat(kpis.salesGrowth?.growthRate) >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+              {parseFloat(kpis.salesGrowth?.growthRate) >= 0 ? '↑' : '↓'} {Math.abs(parseFloat(kpis.salesGrowth?.growthRate || 0))}% vs last week
+            </p>
+          </div>
+          <div>
+            <p className="text-gray-400 text-xs uppercase tracking-wide">Pending</p>
+            <p className="text-xl font-semibold mt-1">{kpis.orders?.pending || 0}</p>
+            <p className="text-gray-400 text-xs">awaiting approval</p>
           </div>
         </div>
-      )}
+      </div>
     </div>
   );
 };
@@ -370,183 +356,93 @@ const EmployeeDashboard = () => {
   };
 
   const pendingOrders = invoices.filter(inv => inv.paymentStatus === 'pending');
-  const todayOrders = invoices.filter(inv => {
-    const today = new Date().toDateString();
-    return new Date(inv.createdAt).toDateString() === today;
-  });
+  const todayOrders = invoices.filter(inv => new Date(inv.createdAt).toDateString() === new Date().toDateString());
   const lowStockProducts = products.filter(p => p.stockQuantity <= 10);
-  const outOfStockProducts = products.filter(p => p.stockQuantity === 0);
 
   if (loading) {
-    return <div className="text-center py-20">Loading dashboard...</div>;
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+      </div>
+    );
   }
 
   return (
-    <div className="space-y-8">
-      {/* Welcome Header */}
-      <div className="bg-gradient-to-r from-blue-600 to-blue-800 rounded-2xl p-8 text-white">
-        <h1 className="text-3xl font-bold">
-          Welcome, {user?.firstName || 'Team Member'}! 👋
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-100">
+        <h1 className="text-xl font-semibold text-gray-900">
+          Good {new Date().getHours() < 12 ? 'morning' : new Date().getHours() < 18 ? 'afternoon' : 'evening'}, {user?.firstName || 'there'}
         </h1>
-        <p className="mt-2 text-blue-100">
-          Here's your shift overview for today
-        </p>
-        <p className="mt-1 text-blue-200 text-sm">
-          {new Date().toLocaleDateString('en-US', { 
-            weekday: 'long', 
-            year: 'numeric', 
-            month: 'long', 
-            day: 'numeric' 
-          })}
+        <p className="text-gray-500 text-sm mt-1">
+          {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
         </p>
       </div>
 
-      {/* Quick Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="bg-white p-6 rounded-xl shadow-md border-l-4 border-blue-600">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-500">Today's Orders</p>
-              <p className="text-3xl font-bold text-gray-900 mt-1">{todayOrders.length}</p>
-            </div>
-            <div className="bg-blue-100 p-3 rounded-full">
-              <Clipboard size={24} className="text-blue-600" />
-            </div>
-          </div>
+      {/* Stats */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="bg-white rounded-lg p-5 shadow-sm border border-gray-100">
+          <p className="text-xs font-medium text-gray-500 uppercase">Today's Orders</p>
+          <p className="text-2xl font-semibold text-gray-900 mt-1">{todayOrders.length}</p>
         </div>
-
-        <div className="bg-white p-6 rounded-xl shadow-md border-l-4 border-blue-500">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-500">Pending Approval</p>
-              <p className="text-3xl font-bold text-gray-900 mt-1">{pendingOrders.length}</p>
-            </div>
-            <div className="bg-blue-100 p-3 rounded-full">
-              <Clock size={24} className="text-blue-600" />
-            </div>
-          </div>
+        <div className="bg-white rounded-lg p-5 shadow-sm border border-gray-100">
+          <p className="text-xs font-medium text-gray-500 uppercase">Pending</p>
+          <p className="text-2xl font-semibold text-amber-600 mt-1">{pendingOrders.length}</p>
         </div>
-
-        <div className="bg-white p-6 rounded-xl shadow-md border-l-4 border-blue-400">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-500">Low Stock Items</p>
-              <p className="text-3xl font-bold text-gray-900 mt-1">{lowStockProducts.length}</p>
-            </div>
-            <div className="bg-blue-100 p-3 rounded-full">
-              <AlertTriangle size={24} className="text-blue-600" />
-            </div>
-          </div>
+        <div className="bg-white rounded-lg p-5 shadow-sm border border-gray-100">
+          <p className="text-xs font-medium text-gray-500 uppercase">Low Stock</p>
+          <p className="text-2xl font-semibold text-red-600 mt-1">{lowStockProducts.length}</p>
         </div>
-
-        <div className="bg-white p-6 rounded-xl shadow-md border-l-4 border-blue-300">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-500">Out of Stock</p>
-              <p className="text-3xl font-bold text-gray-900 mt-1">{outOfStockProducts.length}</p>
-            </div>
-            <div className="bg-blue-100 p-3 rounded-full">
-              <BoxIcon size={24} className="text-blue-600" />
-            </div>
-          </div>
+        <div className="bg-white rounded-lg p-5 shadow-sm border border-gray-100">
+          <p className="text-xs font-medium text-gray-500 uppercase">Total Products</p>
+          <p className="text-2xl font-semibold text-gray-900 mt-1">{products.length}</p>
         </div>
       </div>
 
       {/* Quick Actions */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <button
-          onClick={() => navigate('/products')}
-          className="bg-white p-6 rounded-xl shadow-md hover:shadow-lg transition-all flex items-center gap-4 border-2 border-transparent hover:border-blue-500"
-        >
-          <div className="bg-blue-100 p-4 rounded-full">
-            <Package size={28} className="text-blue-600" />
-          </div>
-          <div className="text-left">
-            <h3 className="text-lg font-semibold text-gray-900">Manage Products</h3>
-            <p className="text-gray-500 text-sm">View & update inventory</p>
-          </div>
+      <div className="grid grid-cols-3 gap-4">
+        <button onClick={() => navigate('/products')} className="bg-white rounded-lg p-4 shadow-sm border border-gray-100 hover:border-gray-300 transition-colors text-left">
+          <Package size={20} className="text-gray-400 mb-2" />
+          <p className="font-medium text-gray-900">Products</p>
+          <p className="text-xs text-gray-500">Manage inventory</p>
         </button>
-
-        <button
-          onClick={() => navigate('/invoices')}
-          className="bg-white p-6 rounded-xl shadow-md hover:shadow-lg transition-all flex items-center gap-4 border-2 border-transparent hover:border-blue-500"
-        >
-          <div className="bg-blue-100 p-4 rounded-full">
-            <Clipboard size={28} className="text-blue-600" />
-          </div>
-          <div className="text-left">
-            <h3 className="text-lg font-semibold text-gray-900">View Orders</h3>
-            <p className="text-gray-500 text-sm">Process customer orders</p>
-          </div>
+        <button onClick={() => navigate('/invoices')} className="bg-white rounded-lg p-4 shadow-sm border border-gray-100 hover:border-gray-300 transition-colors text-left">
+          <Clipboard size={20} className="text-gray-400 mb-2" />
+          <p className="font-medium text-gray-900">Orders</p>
+          <p className="text-xs text-gray-500">View all orders</p>
         </button>
-
-        <button
-          onClick={() => navigate('/shop')}
-          className="bg-white p-6 rounded-xl shadow-md hover:shadow-lg transition-all flex items-center gap-4 border-2 border-transparent hover:border-blue-500"
-        >
-          <div className="bg-blue-100 p-4 rounded-full">
-            <ShoppingCart size={28} className="text-blue-600" />
-          </div>
-          <div className="text-left">
-            <h3 className="text-lg font-semibold text-gray-900">New Sale</h3>
-            <p className="text-gray-500 text-sm">Create customer order</p>
-          </div>
+        <button onClick={() => navigate('/shop')} className="bg-white rounded-lg p-4 shadow-sm border border-gray-100 hover:border-gray-300 transition-colors text-left">
+          <ShoppingCart size={20} className="text-gray-400 mb-2" />
+          <p className="font-medium text-gray-900">New Sale</p>
+          <p className="text-xs text-gray-500">Create order</p>
         </button>
       </div>
 
       {/* Recent Orders */}
-      <div className="bg-white rounded-xl shadow-md p-6">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-semibold">Recent Orders</h2>
-          <button
-            onClick={() => navigate('/invoices')}
-            className="text-blue-600 hover:text-blue-800 text-sm font-medium flex items-center gap-1"
-          >
-            View All <ArrowRight size={16} />
-          </button>
+      <div className="bg-white rounded-lg shadow-sm border border-gray-100">
+        <div className="p-4 border-b border-gray-100 flex items-center justify-between">
+          <h2 className="font-medium text-gray-900">Recent Orders</h2>
+          <button onClick={() => navigate('/invoices')} className="text-xs text-indigo-600">View all →</button>
         </div>
-        
-        {invoices.length > 0 ? (
-          <div className="overflow-x-auto">
-            <table className="min-w-full">
-              <thead>
-                <tr className="border-b">
-                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Order</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Customer</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Items</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Total</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {invoices.slice(0, 10).map(order => (
-                  <tr key={order.id} className="border-b hover:bg-gray-50">
-                    <td className="py-3 px-4 font-medium">{order.invoiceNumber}</td>
-                    <td className="py-3 px-4 text-gray-600">
-                      {order.user?.firstName || order.user?.email?.split('@')[0] || 'Customer'}
-                    </td>
-                    <td className="py-3 px-4 text-gray-600">{order.items?.length || 0}</td>
-                    <td className="py-3 px-4 font-semibold">${parseFloat(order.totalAmount).toFixed(2)}</td>
-                    <td className="py-3 px-4">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        order.paymentStatus === 'completed' ? 'bg-blue-100 text-blue-700' :
-                        order.paymentStatus === 'pending' ? 'bg-blue-50 text-blue-600' :
-                        'bg-gray-100 text-gray-700'
-                      }`}>
-                        {order.paymentStatus}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <div className="text-center py-12 text-gray-500">
-            <Clipboard size={48} className="mx-auto text-gray-300 mb-4" />
-            <p>No orders yet today</p>
-          </div>
-        )}
+        <div className="divide-y divide-gray-50">
+          {invoices.slice(0, 5).map(order => (
+            <div key={order.id} className="p-4 flex items-center justify-between">
+              <div>
+                <p className="font-medium text-sm text-gray-900">{order.invoiceNumber}</p>
+                <p className="text-xs text-gray-500">{order.user?.firstName || 'Customer'}</p>
+              </div>
+              <div className="text-right">
+                <p className="font-medium text-sm">${parseFloat(order.totalAmount).toFixed(2)}</p>
+                <span className={`text-xs px-2 py-0.5 rounded-full ${
+                  order.paymentStatus === 'completed' ? 'bg-emerald-50 text-emerald-600' :
+                  order.paymentStatus === 'pending' ? 'bg-amber-50 text-amber-600' : 'bg-gray-50 text-gray-600'
+                }`}>
+                  {order.paymentStatus}
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
@@ -574,155 +470,82 @@ const CustomerDashboard = () => {
     }
   };
 
-  const totalSpent = orders
-    .filter(o => o.paymentStatus === 'completed')
-    .reduce((sum, o) => sum + parseFloat(o.totalAmount || 0), 0);
-
-  const pendingOrders = orders.filter(o => o.paymentStatus === 'pending');
-  const completedOrders = orders.filter(o => o.paymentStatus === 'completed');
+  const totalSpent = orders.filter(o => o.paymentStatus === 'completed').reduce((sum, o) => sum + parseFloat(o.totalAmount || 0), 0);
 
   if (loading) {
-    return <div className="text-center py-20">Loading your dashboard...</div>;
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+      </div>
+    );
   }
 
   return (
-    <div className="space-y-8">
-      {/* Welcome Header */}
-      <div className="bg-gradient-to-r from-blue-600 to-blue-800 rounded-2xl p-8 text-white">
-        <h1 className="text-3xl font-bold">
-          Welcome back, {user?.firstName || 'Customer'}! 👋
-        </h1>
-        <p className="mt-2 text-blue-100">
-          Here's what's happening with your orders
-        </p>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-100">
+        <h1 className="text-xl font-semibold text-gray-900">Welcome back, {user?.firstName || 'there'}</h1>
+        <p className="text-gray-500 text-sm mt-1">Track your orders and shopping activity</p>
       </div>
 
-      {/* Quick Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="bg-white p-6 rounded-xl shadow-md border-l-4 border-blue-600">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-500">Total Orders</p>
-              <p className="text-3xl font-bold text-gray-900 mt-1">{orders.length}</p>
-            </div>
-            <div className="bg-blue-100 p-3 rounded-full">
-              <ShoppingBag size={24} className="text-blue-600" />
-            </div>
-          </div>
+      {/* Stats */}
+      <div className="grid grid-cols-3 gap-4">
+        <div className="bg-white rounded-lg p-5 shadow-sm border border-gray-100">
+          <p className="text-xs font-medium text-gray-500 uppercase">Orders</p>
+          <p className="text-2xl font-semibold text-gray-900 mt-1">{orders.length}</p>
         </div>
-
-        <div className="bg-white p-6 rounded-xl shadow-md border-l-4 border-blue-500">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-500">Total Spent</p>
-              <p className="text-3xl font-bold text-gray-900 mt-1">${totalSpent.toFixed(2)}</p>
-            </div>
-            <div className="bg-blue-100 p-3 rounded-full">
-              <CreditCard size={24} className="text-blue-600" />
-            </div>
-          </div>
+        <div className="bg-white rounded-lg p-5 shadow-sm border border-gray-100">
+          <p className="text-xs font-medium text-gray-500 uppercase">Total Spent</p>
+          <p className="text-2xl font-semibold text-gray-900 mt-1">${totalSpent.toFixed(2)}</p>
         </div>
-
-        <div className="bg-white p-6 rounded-xl shadow-md border-l-4 border-blue-400">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-500">Pending Orders</p>
-              <p className="text-3xl font-bold text-gray-900 mt-1">{pendingOrders.length}</p>
-            </div>
-            <div className="bg-blue-100 p-3 rounded-full">
-              <Clock size={24} className="text-blue-600" />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white p-6 rounded-xl shadow-md border-l-4 border-blue-300">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-500">Completed</p>
-              <p className="text-3xl font-bold text-gray-900 mt-1">{completedOrders.length}</p>
-            </div>
-            <div className="bg-blue-100 p-3 rounded-full">
-              <CheckCircle size={24} className="text-blue-600" />
-            </div>
-          </div>
+        <div className="bg-white rounded-lg p-5 shadow-sm border border-gray-100">
+          <p className="text-xs font-medium text-gray-500 uppercase">Pending</p>
+          <p className="text-2xl font-semibold text-amber-600 mt-1">{orders.filter(o => o.paymentStatus === 'pending').length}</p>
         </div>
       </div>
 
-      {/* Quick Actions */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <button
-          onClick={() => navigate('/shop')}
-          className="bg-gradient-to-r from-blue-500 to-blue-600 text-white p-6 rounded-xl shadow-md hover:shadow-lg transition-all flex items-center justify-between group"
-        >
-          <div className="flex items-center gap-4">
-            <div className="bg-white/20 p-3 rounded-full">
-              <ShoppingCart size={28} />
-            </div>
-            <div className="text-left">
-              <h3 className="text-xl font-semibold">Start Shopping</h3>
-              <p className="text-blue-100">Browse our products</p>
-            </div>
-          </div>
-          <ArrowRight size={24} className="group-hover:translate-x-2 transition-transform" />
+      {/* Actions */}
+      <div className="grid grid-cols-2 gap-4">
+        <button onClick={() => navigate('/shop')} className="bg-gray-900 text-white rounded-lg p-5 text-left hover:bg-gray-800 transition-colors">
+          <ShoppingCart size={24} className="mb-3" />
+          <p className="font-medium">Start Shopping</p>
+          <p className="text-gray-400 text-sm">Browse products</p>
         </button>
-
-        <button
-          onClick={() => navigate('/my-orders')}
-          className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-6 rounded-xl shadow-md hover:shadow-lg transition-all flex items-center justify-between group"
-        >
-          <div className="flex items-center gap-4">
-            <div className="bg-white/20 p-3 rounded-full">
-              <Package size={28} />
-            </div>
-            <div className="text-left">
-              <h3 className="text-xl font-semibold">View Orders</h3>
-              <p className="text-blue-100">Track your purchases</p>
-            </div>
-          </div>
-          <ArrowRight size={24} className="group-hover:translate-x-2 transition-transform" />
+        <button onClick={() => navigate('/my-orders')} className="bg-white rounded-lg p-5 shadow-sm border border-gray-100 text-left hover:border-gray-300 transition-colors">
+          <Package size={24} className="text-gray-400 mb-3" />
+          <p className="font-medium text-gray-900">My Orders</p>
+          <p className="text-gray-500 text-sm">View history</p>
         </button>
       </div>
 
       {/* Recent Orders */}
-      <div className="bg-white rounded-xl shadow-md p-6">
-        <h2 className="text-xl font-semibold mb-6">Recent Orders</h2>
-        
+      <div className="bg-white rounded-lg shadow-sm border border-gray-100">
+        <div className="p-4 border-b border-gray-100">
+          <h2 className="font-medium text-gray-900">Recent Orders</h2>
+        </div>
         {orders.length > 0 ? (
-          <div className="space-y-4">
+          <div className="divide-y divide-gray-50">
             {orders.slice(0, 5).map(order => (
-              <div key={order.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                <div className="flex items-center gap-4">
-                  <div className="bg-blue-100 p-2 rounded-full">
-                    {order.paymentStatus === 'completed' ? (
-                      <CheckCircle size={20} className="text-blue-600" />
-                    ) : (
-                      <Clock size={20} className="text-blue-500" />
-                    )}
-                  </div>
-                  <div>
-                    <p className="font-medium">{order.invoiceNumber}</p>
-                    <p className="text-sm text-gray-500">
-                      {new Date(order.createdAt).toLocaleDateString()}
-                    </p>
-                  </div>
+              <div key={order.id} className="p-4 flex items-center justify-between">
+                <div>
+                  <p className="font-medium text-sm text-gray-900">{order.invoiceNumber}</p>
+                  <p className="text-xs text-gray-500">{new Date(order.createdAt).toLocaleDateString()}</p>
                 </div>
                 <div className="text-right">
-                  <p className="font-bold">${parseFloat(order.totalAmount).toFixed(2)}</p>
-                  <p className="text-xs text-gray-500">{order.items?.length || 0} items</p>
+                  <p className="font-medium text-sm">${parseFloat(order.totalAmount).toFixed(2)}</p>
+                  <span className={`text-xs px-2 py-0.5 rounded-full ${
+                    order.paymentStatus === 'completed' ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'
+                  }`}>
+                    {order.paymentStatus}
+                  </span>
                 </div>
               </div>
             ))}
           </div>
         ) : (
-          <div className="text-center py-12">
-            <ShoppingBag size={48} className="mx-auto text-gray-300 mb-4" />
-            <p className="text-gray-500">No orders yet</p>
-            <button
-              onClick={() => navigate('/shop')}
-              className="mt-4 bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700"
-            >
-              Start Shopping
-            </button>
+          <div className="p-8 text-center text-gray-400">
+            <ShoppingBag size={32} className="mx-auto mb-2" />
+            <p>No orders yet</p>
           </div>
         )}
       </div>
@@ -730,17 +553,10 @@ const CustomerDashboard = () => {
   );
 };
 
-// ==================== MAIN DASHBOARD COMPONENT ====================
+// ==================== MAIN ====================
 export const DashboardPage = () => {
   const { user } = useAuth();
-
-  if (user?.role === 'customer') {
-    return <CustomerDashboard />;
-  }
-  
-  if (user?.role === 'employee') {
-    return <EmployeeDashboard />;
-  }
-
+  if (user?.role === 'customer') return <CustomerDashboard />;
+  if (user?.role === 'employee') return <EmployeeDashboard />;
   return <ManagerDashboard />;
 };
