@@ -1,33 +1,33 @@
 import api from './api';
 
 export const invoiceService = {
-  async getAll(params) {
-    const { data } = await api.get('/invoices', { params });
-    return data;
+  getAll: async (params = {}) => {
+    const response = await api.get('/invoices', { params });
+    return response.data;
   },
 
-  async getMyOrders() {
-    const { data } = await api.get('/invoices/my-orders');
-    return data;
+  getMyOrders: async () => {
+    const response = await api.get('/invoices/my-orders');
+    return response.data;
   },
 
-  async getById(id) {
-    const { data } = await api.get(`/invoices/${id}`);
-    return data;
+  getById: async (id) => {
+    const response = await api.get(`/invoices/${id}`);
+    return response.data;
   },
 
-  async create(invoiceData) {
-    const { data } = await api.post('/invoices', invoiceData);
-    return data;
+  create: async (data) => {
+    const response = await api.post('/invoices', data);
+    return response.data;
   },
 
-  async update(id, invoiceData) {
-    const { data } = await api.put(`/invoices/${id}`, invoiceData);
-    return data;
+  update: async (id, data) => {
+    const response = await api.put(`/invoices/${id}`, data);
+    return response.data;
   },
 
-  async delete(id) {
-    const { data } = await api.delete(`/invoices/${id}`);
-    return data;
+  delete: async (id) => {
+    const response = await api.delete(`/invoices/${id}`);
+    return response.data;
   }
 };

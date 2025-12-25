@@ -1,13 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { invoiceService } from '../services/invoiceService';
-import { Trash2, Plus, Minus, CreditCard, Banknote, ShoppingBag, ArrowLeft } from 'lucide-react';
+import { Trash2, Plus, Minus, ShoppingBag, ArrowLeft, CreditCard } from 'lucide-react';
 
 export const CartPage = () => {
   const [cart, setCart] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState('card');
-  const [showCheckout, setShowCheckout] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -45,41 +41,8 @@ export const CartPage = () => {
   };
 
   const subtotal = cart.reduce((sum, item) => sum + (parseFloat(item.price) * item.quantity), 0);
-  const tax = subtotal * 0.1; // 10% tax
+  const tax = subtotal * 0.20; // 20% VAT
   const total = subtotal + tax;
-
-  const handleCheckout = async () => {
-    if (cart.length === 0) return;
-    
-    setLoading(true);
-    try {
-      const orderData = {
-        items: cart.map(item => ({
-          productId: item.id,
-          quantity: item.quantity
-        })),
-        paymentMethod: paymentMethod,
-        // Cash payments are pending until manager accepts, card/paypal are completed
-        paymentStatus: paymentMethod === 'cash' ? 'pending' : 'completed'
-      };
-
-      await invoiceService.create(orderData);
-      
-      clearCart();
-      
-      if (paymentMethod === 'cash') {
-        alert('Order placed successfully! Your cash payment is pending approval from the manager.');
-      } else {
-        alert('Order placed successfully! Payment completed.');
-      }
-      
-      navigate('/my-orders');
-    } catch (error) {
-      alert('Failed to place order: ' + (error.response?.data?.error || error.message));
-    } finally {
-      setLoading(false);
-    }
-  };
 
   if (cart.length === 0) {
     return (
@@ -127,7 +90,7 @@ export const CartPage = () => {
               <div className="flex-1">
                 <h3 className="font-semibold text-lg">{item.name}</h3>
                 <p className="text-sm text-gray-600">{item.brand}</p>
-                <p className="text-blue-600 font-bold mt-1">${parseFloat(item.price).toFixed(2)}</p>
+                <p className="text-blue-600 font-bold mt-1">€{parseFloat(item.price).toFixed(2)}</p>
               </div>
 
               <div className="flex flex-col items-end justify-between">
@@ -156,7 +119,7 @@ export const CartPage = () => {
                 </div>
 
                 <p className="font-semibold">
-                  ${(parseFloat(item.price) * item.quantity).toFixed(2)}
+                  €{(parseFloat(item.price) * item.quantity).toFixed(2)}
                 </p>
               </div>
             </div>
@@ -176,88 +139,36 @@ export const CartPage = () => {
           
           <div className="space-y-3 mb-6">
             <div className="flex justify-between">
-              <span className="text-gray-600">Subtotal</span>
-              <span>${subtotal.toFixed(2)}</span>
+              <span className="text-gray-600">Subtotal ({cart.length} items)</span>
+              <span>€{subtotal.toFixed(2)}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-600">Tax (10%)</span>
-              <span>${tax.toFixed(2)}</span>
+              <span className="text-gray-600">VAT (20%)</span>
+              <span>€{tax.toFixed(2)}</span>
             </div>
             <div className="border-t pt-3 flex justify-between font-bold text-lg">
               <span>Total</span>
-              <span>${total.toFixed(2)}</span>
-            </div>
-          </div>
-
-          {/* Payment Method Selection */}
-          <div className="mb-6">
-            <h3 className="font-semibold mb-3">Payment Method</h3>
-            <div className="space-y-2">
-              <label className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer ${paymentMethod === 'card' ? 'border-blue-500 bg-blue-50' : 'hover:bg-gray-50'}`}>
-                <input
-                  type="radio"
-                  name="payment"
-                  value="card"
-                  checked={paymentMethod === 'card'}
-                  onChange={(e) => setPaymentMethod(e.target.value)}
-                  className="text-blue-600"
-                />
-                <CreditCard size={20} className="text-gray-600" />
-                <div>
-                  <p className="font-medium">Credit/Debit Card</p>
-                  <p className="text-xs text-gray-500">Instant payment</p>
-                </div>
-              </label>
-
-              <label className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer ${paymentMethod === 'paypal' ? 'border-blue-500 bg-blue-50' : 'hover:bg-gray-50'}`}>
-                <input
-                  type="radio"
-                  name="payment"
-                  value="paypal"
-                  checked={paymentMethod === 'paypal'}
-                  onChange={(e) => setPaymentMethod(e.target.value)}
-                  className="text-blue-600"
-                />
-                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="#00457C">
-                  <path d="M7.076 21.337H2.47a.641.641 0 0 1-.633-.74L4.944 3.72a.77.77 0 0 1 .757-.635h6.24c2.083 0 3.673.402 4.73 1.196 1.138.855 1.633 2.195 1.47 3.98-.238 2.566-1.26 4.39-3.036 5.42-1.603.93-3.696 1.186-5.878 1.186H7.64a.769.769 0 0 0-.758.635l-.806 5.835z"/>
-                </svg>
-                <div>
-                  <p className="font-medium">PayPal</p>
-                  <p className="text-xs text-gray-500">Instant payment</p>
-                </div>
-              </label>
-
-              <label className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer ${paymentMethod === 'cash' ? 'border-blue-500 bg-blue-50' : 'hover:bg-gray-50'}`}>
-                <input
-                  type="radio"
-                  name="payment"
-                  value="cash"
-                  checked={paymentMethod === 'cash'}
-                  onChange={(e) => setPaymentMethod(e.target.value)}
-                  className="text-blue-600"
-                />
-                <Banknote size={20} className="text-gray-600" />
-                <div>
-                  <p className="font-medium">Cash on Delivery</p>
-                  <p className="text-xs text-orange-600">Pending until manager approval</p>
-                </div>
-              </label>
+              <span>€{total.toFixed(2)}</span>
             </div>
           </div>
 
           <button
-            onClick={handleCheckout}
-            disabled={loading || cart.length === 0}
-            className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            onClick={() => navigate('/checkout')}
+            className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 flex items-center justify-center gap-2"
           >
-            {loading ? 'Processing...' : `Place Order - $${total.toFixed(2)}`}
+            <CreditCard size={20} />
+            Proceed to Checkout
           </button>
 
-          {paymentMethod === 'cash' && (
-            <p className="text-xs text-orange-600 mt-2 text-center">
-              ⚠️ Cash orders require manager approval before processing
-            </p>
-          )}
+          <div className="mt-4 text-center text-sm text-gray-500">
+            <p>🔒 Secure checkout with Stripe & PayPal</p>
+          </div>
+
+          {/* Payment Methods Preview */}
+          <div className="mt-4 flex justify-center gap-3">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/b/ba/Stripe_Logo%2C_revised_2016.svg/512px-Stripe_Logo%2C_revised_2016.svg.png" alt="Stripe" className="h-6 opacity-50" />
+            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/b/b5/PayPal.svg/512px-PayPal.svg.png" alt="PayPal" className="h-6 opacity-50" />
+          </div>
         </div>
       </div>
     </div>

@@ -12,6 +12,7 @@ import { ReportsPage } from './pages/ReportsPage';
 import { UsersPage } from './pages/UsersPage';
 import { ShopPage } from './pages/ShopPage';
 import { CartPage } from './pages/CartPage';
+import { CheckoutPage } from './pages/CheckoutPage';
 import { MyOrdersPage } from './pages/MyOrdersPage';
 
 function App() {
@@ -30,6 +31,7 @@ function App() {
             <Route index element={<DashboardPage />} />
             <Route path="shop" element={<ShopPage />} />
             <Route path="cart" element={<CartPage />} />
+            <Route path="checkout" element={<CheckoutPage />} />
             <Route path="my-orders" element={<MyOrdersPage />} />
             <Route path="products" element={<ProductsPage />} />
             <Route path="invoices" element={<InvoicesPage />} />
