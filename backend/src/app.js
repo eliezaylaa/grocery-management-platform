@@ -11,6 +11,7 @@ const invoiceRoutes = require('./routes/invoice.routes');
 const reportRoutes = require('./routes/report.routes');
 const paymentRoutes = require('./routes/payment.routes');
 const passwordRoutes = require('./routes/password.routes');
+const receiptRoutes = require('./routes/receipt.routes');
 const setupRoutes = require('./routes/setup.routes');
 
 const app = express();
@@ -59,6 +60,7 @@ const swaggerOptions = {
       { name: 'Products', description: 'Product & inventory management' },
       { name: 'Invoices', description: 'Orders and invoices' },
       { name: 'Payments', description: 'Stripe & PayPal payments' },
+      { name: 'Receipts', description: 'PDF receipts & email' },
       { name: 'Password', description: 'Password reset & change' },
       { name: 'Reports', description: 'KPIs and analytics' }
     ]
@@ -98,6 +100,7 @@ app.use('/api/products', productRoutes);
 app.use('/api/invoices', invoiceRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/password', passwordRoutes);
+app.use('/api/receipts', receiptRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/setup', setupRoutes);
 
