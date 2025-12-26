@@ -1,7 +1,6 @@
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const { User } = require('../models');
-const { Op } = require('sequelize');
 const emailService = require('../services/email.service');
 
 // Store reset tokens (in production, use Redis or database)
@@ -24,8 +23,10 @@ exports.forgotPassword = async (req, res) => {
     // Find user by email
     const user = await User.findOne({ where: { email: email.toLowerCase() } });
 
-    // Always return success to prevent email enumeration
+    // Always return success message to prevent email enumeration
+    // But only send email if user exists
     if (!user) {
+      console.log('No user found for email:', email);
       return res.json({ 
         message: 'If an account with that email exists, a password reset link has been sent.' 
       });
@@ -42,7 +43,14 @@ exports.forgotPassword = async (req, res) => {
     });
 
     // Send reset email
-    await emailService.sendPasswordResetEmail(user.email, resetToken, user.firstName);
+    try {
+      await emailService.sendPasswordResetEmail(user.email, resetToken, user.firstName);
+      console.log('Reset email sent to:', user.email);
+    } catch (emailError) {
+      console.error('Failed to send reset email:', emailError.message);
+      // Still return success to not reveal if email exists
+      // But log the error for debugging
+    }
 
     res.json({ 
       message: 'If an account with that email exists, a password reset link has been sent.' 
@@ -117,8 +125,10 @@ exports.resetPassword = async (req, res) => {
     // Delete used token
     resetTokens.delete(token);
 
-    // Send confirmation email
-    await emailService.sendPasswordChangedEmail(user.email, user.firstName);
+    // Send confirmation email (non-blocking)
+    emailService.sendPasswordChangedEmail(user.email, user.firstName).catch(err => {
+      console.error('Failed to send password changed email:', err.message);
+    });
 
     res.json({ message: 'Password reset successfully' });
   } catch (error) {
@@ -161,8 +171,10 @@ exports.changePassword = async (req, res) => {
     // Update password
     await user.update({ password: hashedPassword });
 
-    // Send confirmation email
-    await emailService.sendPasswordChangedEmail(user.email, user.firstName);
+    // Send confirmation email (non-blocking)
+    emailService.sendPasswordChangedEmail(user.email, user.firstName).catch(err => {
+      console.error('Failed to send password changed email:', err.message);
+    });
 
     res.json({ message: 'Password changed successfully' });
   } catch (error) {

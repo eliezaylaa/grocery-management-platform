@@ -1,18 +1,29 @@
 const nodemailer = require('nodemailer');
 
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-});
+// Create transporter with better config
+const createTransporter = () => {
+  return nodemailer.createTransport({
+    service: 'gmail',
+    host: 'smtp.gmail.com',
+    port: 587,
+    secure: false,
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASS?.replace(/\s/g, ''), // Remove spaces from app password
+    },
+    tls: {
+      rejectUnauthorized: false
+    }
+  });
+};
 
 exports.sendPasswordResetEmail = async (email, resetToken, firstName) => {
-  const resetUrl = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;
+  const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/reset-password?token=${resetToken}`;
+  
+  const transporter = createTransporter();
   
   const mailOptions = {
-    from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
+    from: `"Trinity Grocery" <${process.env.EMAIL_USER}>`,
     to: email,
     subject: 'Reset Your Password - Trinity Grocery',
     html: `
@@ -26,7 +37,6 @@ exports.sendPasswordResetEmail = async (email, resetToken, firstName) => {
           .header h1 { color: white; margin: 0; font-size: 24px; }
           .content { background: #f9fafb; padding: 30px; border: 1px solid #e5e7eb; }
           .button { display: inline-block; background: #2563eb; color: white; padding: 14px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; margin: 20px 0; }
-          .button:hover { background: #1d4ed8; }
           .footer { text-align: center; padding: 20px; color: #6b7280; font-size: 12px; }
           .warning { background: #fef3c7; border: 1px solid #f59e0b; padding: 15px; border-radius: 8px; margin-top: 20px; }
         </style>
@@ -41,7 +51,7 @@ exports.sendPasswordResetEmail = async (email, resetToken, firstName) => {
             <p>We received a request to reset your password. Click the button below to create a new password:</p>
             
             <div style="text-align: center;">
-              <a href="${resetUrl}" class="button">Reset My Password</a>
+              <a href="${resetUrl}" class="button" style="color: white;">Reset My Password</a>
             </div>
             
             <p>Or copy and paste this link into your browser:</p>
@@ -49,12 +59,11 @@ exports.sendPasswordResetEmail = async (email, resetToken, firstName) => {
             
             <div class="warning">
               <strong>⚠️ This link expires in 1 hour.</strong><br>
-              If you didn't request this password reset, please ignore this email. Your password will remain unchanged.
+              If you didn't request this password reset, please ignore this email.
             </div>
           </div>
           <div class="footer">
             <p>© ${new Date().getFullYear()} Trinity Grocery. All rights reserved.</p>
-            <p>This is an automated email, please do not reply.</p>
           </div>
         </div>
       </body>
@@ -62,12 +71,23 @@ exports.sendPasswordResetEmail = async (email, resetToken, firstName) => {
     `,
   };
 
-  await transporter.sendMail(mailOptions);
+  try {
+    console.log('Attempting to send email to:', email);
+    console.log('Using EMAIL_USER:', process.env.EMAIL_USER);
+    const result = await transporter.sendMail(mailOptions);
+    console.log('Email sent successfully:', result.messageId);
+    return result;
+  } catch (error) {
+    console.error('Email sending failed:', error.message);
+    throw error;
+  }
 };
 
 exports.sendPasswordChangedEmail = async (email, firstName) => {
+  const transporter = createTransporter();
+  
   const mailOptions = {
-    from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
+    from: `"Trinity Grocery" <${process.env.EMAIL_USER}>`,
     to: email,
     subject: 'Password Changed Successfully - Trinity Grocery',
     html: `
@@ -98,7 +118,7 @@ exports.sendPasswordChangedEmail = async (email, firstName) => {
             
             <p style="margin-top: 20px;">Your password has been changed successfully. You can now log in with your new password.</p>
             
-            <p>If you didn't make this change, please contact our support team immediately.</p>
+            <p>If you didn't make this change, please contact support immediately.</p>
           </div>
           <div class="footer">
             <p>© ${new Date().getFullYear()} Trinity Grocery. All rights reserved.</p>
@@ -109,5 +129,12 @@ exports.sendPasswordChangedEmail = async (email, firstName) => {
     `,
   };
 
-  await transporter.sendMail(mailOptions);
+  try {
+    const result = await transporter.sendMail(mailOptions);
+    console.log('Password changed email sent:', result.messageId);
+    return result;
+  } catch (error) {
+    console.error('Password changed email failed:', error.message);
+    // Don't throw - this is not critical
+  }
 };
