@@ -65,12 +65,7 @@ export const LoginPage = () => {
 
           {/* Password */}
           <div>
-            <div className="flex items-center justify-between mb-2">
-              <label className="block text-sm font-medium text-gray-700">Password</label>
-              <Link to="/forgot-password" className="text-sm text-blue-600 hover:text-blue-800">
-                Forgot password?
-              </Link>
-            </div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
             <div className="relative">
               <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
               <input
@@ -110,14 +105,17 @@ export const LoginPage = () => {
             )}
           </button>
 
-          {/* Register Link */}
-          <div className="text-center pt-4 border-t border-gray-200">
+          {/* Register & Forgot Password Links */}
+          <div className="text-center pt-4 border-t border-gray-200 space-y-3">
             <p className="text-gray-600">
               Don't have an account?{' '}
               <Link to="/register" className="text-blue-600 hover:text-blue-800 font-semibold">
                 Create one
               </Link>
             </p>
+            <Link to="/forgot-password" className="text-sm text-gray-500 hover:text-blue-600">
+              Forgot your password?
+            </Link>
           </div>
         </form>
       </div>

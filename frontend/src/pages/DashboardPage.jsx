@@ -5,8 +5,8 @@ import { reportService } from '../services/reportService';
 import { invoiceService } from '../services/invoiceService';
 import { productService } from '../services/productService';
 import { 
-  ShoppingCart, AlertTriangle, DollarSign, TrendingUp, Package, 
-  ShoppingBag, Clock, CheckCircle, CreditCard, ArrowRight,
+  ShoppingCart, DollarSign, TrendingUp, Package, 
+  ShoppingBag, Clock, CheckCircle, CreditCard,
   Clipboard, Users
 } from 'lucide-react';
 import {
@@ -48,7 +48,6 @@ const ManagerDashboard = () => {
     return <div className="text-center py-20 text-gray-500">Failed to load dashboard</div>;
   }
 
-  // Payment method colors - Card purple, PayPal yellow, Cash green
   const PAYMENT_COLORS = {
     card: '#6366F1',
     paypal: '#EAB308', 
@@ -68,7 +67,6 @@ const ManagerDashboard = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold text-gray-900">Dashboard</h1>
@@ -79,7 +77,6 @@ const ManagerDashboard = () => {
         </div>
       </div>
 
-      {/* Stats Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-white rounded-lg p-5 shadow-sm border border-gray-100">
           <div className="flex items-center justify-between">
@@ -138,9 +135,7 @@ const ManagerDashboard = () => {
         </div>
       </div>
 
-      {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Revenue Chart */}
         <div className="lg:col-span-2 bg-white rounded-lg shadow-sm border border-gray-100 p-5">
           <h2 className="font-medium text-gray-900 mb-4">Revenue (Last 7 Days)</h2>
           {kpis.dailySales && kpis.dailySales.length > 0 ? (
@@ -167,7 +162,6 @@ const ManagerDashboard = () => {
           )}
         </div>
 
-        {/* Payment Methods Pie Chart - SOLID DISK */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-5">
           <h2 className="font-medium text-gray-900 mb-1">Payment Methods</h2>
           <p className="text-xs text-gray-500 mb-4">All time purchases</p>
@@ -221,9 +215,7 @@ const ManagerDashboard = () => {
         </div>
       </div>
 
-      {/* Bottom Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Top Products */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-5">
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-medium text-gray-900">Top Products</h2>
@@ -252,7 +244,6 @@ const ManagerDashboard = () => {
           )}
         </div>
 
-        {/* Low Stock */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-5">
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-medium text-gray-900">Low Stock</h2>
@@ -290,7 +281,6 @@ const ManagerDashboard = () => {
         </div>
       </div>
 
-      {/* Quick Stats Bar */}
       <div className="bg-gradient-to-r from-gray-900 to-gray-800 rounded-lg p-5 text-white">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
           <div>
@@ -387,10 +377,6 @@ const EmployeeDashboard = () => {
       </div>
 
       <div className="grid grid-cols-3 gap-4">
-        <button onClick={() => navigate('/products')} className="bg-white rounded-lg p-4 shadow-sm border border-gray-100 hover:border-gray-300 text-left">
-          <Package size={20} className="text-gray-400 mb-2" />
-          <p className="font-medium text-gray-900">Products</p>
-        </button>
         <button onClick={() => navigate('/invoices')} className="bg-white rounded-lg p-4 shadow-sm border border-gray-100 hover:border-gray-300 text-left">
           <Clipboard size={20} className="text-gray-400 mb-2" />
           <p className="font-medium text-gray-900">Orders</p>
@@ -398,6 +384,10 @@ const EmployeeDashboard = () => {
         <button onClick={() => navigate('/shop')} className="bg-white rounded-lg p-4 shadow-sm border border-gray-100 hover:border-gray-300 text-left">
           <ShoppingCart size={20} className="text-gray-400 mb-2" />
           <p className="font-medium text-gray-900">New Sale</p>
+        </button>
+        <button onClick={() => navigate('/my-orders')} className="bg-white rounded-lg p-4 shadow-sm border border-gray-100 hover:border-gray-300 text-left">
+          <Package size={20} className="text-gray-400 mb-2" />
+          <p className="font-medium text-gray-900">My Orders</p>
         </button>
       </div>
 
@@ -450,8 +440,6 @@ const CustomerDashboard = () => {
     }
   };
 
-  const totalSpent = orders.filter(o => o.paymentStatus === 'completed').reduce((sum, o) => sum + parseFloat(o.totalAmount || 0), 0);
-
   if (loading) {
     return (
       <div className="flex items-center justify-center h-96">
@@ -467,23 +455,9 @@ const CustomerDashboard = () => {
         <p className="text-gray-500 text-sm mt-1">Your shopping dashboard</p>
       </div>
 
-      <div className="grid grid-cols-3 gap-4">
-        <div className="bg-white rounded-lg p-5 shadow-sm border border-gray-100">
-          <p className="text-xs font-medium text-gray-500 uppercase">Orders</p>
-          <p className="text-2xl font-semibold text-gray-900 mt-1">{orders.length}</p>
-        </div>
-        <div className="bg-white rounded-lg p-5 shadow-sm border border-gray-100">
-          <p className="text-xs font-medium text-gray-500 uppercase">Spent</p>
-          <p className="text-2xl font-semibold text-gray-900 mt-1">${totalSpent.toFixed(2)}</p>
-        </div>
-        <div className="bg-white rounded-lg p-5 shadow-sm border border-gray-100">
-          <p className="text-xs font-medium text-gray-500 uppercase">Pending</p>
-          <p className="text-2xl font-semibold text-amber-600 mt-1">{orders.filter(o => o.paymentStatus === 'pending').length}</p>
-        </div>
-      </div>
-
+      {/* Shop Now & My Orders Buttons */}
       <div className="grid grid-cols-2 gap-4">
-        <button onClick={() => navigate('/shop')} className="bg-gray-900 text-white rounded-lg p-5 text-left hover:bg-gray-800">
+        <button onClick={() => navigate('/shop')} className="bg-blue-600 text-white rounded-lg p-5 text-left hover:bg-blue-700 transition-colors">
           <ShoppingCart size={24} className="mb-3" />
           <p className="font-medium">Shop Now</p>
         </button>
@@ -493,6 +467,7 @@ const CustomerDashboard = () => {
         </button>
       </div>
 
+      {/* Recent Orders */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-100">
         <div className="p-4 border-b border-gray-100">
           <h2 className="font-medium text-gray-900">Recent Orders</h2>
@@ -506,7 +481,7 @@ const CustomerDashboard = () => {
                   <p className="text-xs text-gray-500">{new Date(order.createdAt).toLocaleDateString()}</p>
                 </div>
                 <div className="text-right">
-                  <p className="font-medium text-sm">${parseFloat(order.totalAmount).toFixed(2)}</p>
+                  <p className="font-medium text-sm">€{parseFloat(order.totalAmount).toFixed(2)}</p>
                   <span className={`text-xs px-2 py-0.5 rounded-full ${
                     order.paymentStatus === 'completed' ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'
                   }`}>{order.paymentStatus}</span>
