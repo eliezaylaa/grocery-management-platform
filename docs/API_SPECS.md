@@ -4,6 +4,7 @@
 
 - **Production**: `https://trinity-api-d2wo.onrender.com`
 - **Development**: `http://localhost:5000`
+- **API Documentation**: `/api-docs`
 
 ## Authentication
 
@@ -83,14 +84,6 @@ Content-Type: application/json
 }
 ```
 
-**Response** `200 OK`
-```json
-{
-  "accessToken": "eyJhbGciOiJIUzI1NiIs...",
-  "refreshToken": "eyJhbGciOiJIUzI1NiIs..."
-}
-```
-
 #### Logout
 ```http
 POST /api/auth/logout
@@ -99,6 +92,45 @@ Content-Type: application/json
 
 {
   "refreshToken": "eyJhbGciOiJIUzI1NiIs..."
+}
+```
+
+---
+
+### Password Reset
+
+#### Request Password Reset
+```http
+POST /api/password/forgot
+Content-Type: application/json
+
+{
+  "email": "user@example.com"
+}
+```
+
+**Response** `200 OK`
+```json
+{
+  "message": "Password reset email sent"
+}
+```
+
+#### Reset Password
+```http
+POST /api/password/reset
+Content-Type: application/json
+
+{
+  "token": "reset-token-from-email",
+  "newPassword": "newpassword123"
+}
+```
+
+**Response** `200 OK`
+```json
+{
+  "message": "Password reset successful"
 }
 ```
 
@@ -140,6 +172,12 @@ Authorization: Bearer <token>
       "category": "Spreads",
       "pictureUrl": "https://...",
       "stockQuantity": 50,
+      "nutritionalInfo": {
+        "energy_kcal": 539,
+        "fat": 30.9,
+        "carbohydrates": 57.5,
+        "proteins": 6.3
+      },
       "restockDate": "2024-02-01",
       "restockQuantity": 100
     }
@@ -204,24 +242,6 @@ GET /api/products/search/openfoodfacts?query=nutella
 Authorization: Bearer <token>
 ```
 
-**Response** `200 OK`
-```json
-{
-  "products": [
-    {
-      "barcode": "3017620422003",
-      "name": "Nutella",
-      "brand": "Ferrero",
-      "category": "Spreads",
-      "pictureUrl": "https://..."
-    }
-  ],
-  "total": 24,
-  "page": 1,
-  "totalPages": 1
-}
-```
-
 #### Bulk Import from Open Food Facts (Manager+)
 ```http
 POST /api/products/import/bulk
@@ -257,6 +277,12 @@ GET /api/invoices/my-orders
 Authorization: Bearer <token>
 ```
 
+#### Get Invoice by ID
+```http
+GET /api/invoices/:id
+Authorization: Bearer <token>
+```
+
 #### Create Invoice/Order
 ```http
 POST /api/invoices
@@ -267,8 +293,7 @@ Content-Type: application/json
   "items": [
     {
       "productId": "uuid",
-      "quantity": 2,
-      "unitPrice": 5.99
+      "quantity": 2
     }
   ],
   "paymentMethod": "card",
@@ -292,6 +317,138 @@ Content-Type: application/json
 
 ---
 
+### Payments
+
+#### Get Stripe Publishable Key
+```http
+GET /api/payments/stripe/key
+```
+
+**Response** `200 OK`
+```json
+{
+  "publishableKey": "pk_test_..."
+}
+```
+
+#### Create Stripe Payment Intent
+```http
+POST /api/payments/stripe/create-payment-intent
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "amount": 29.99,
+  "currency": "eur"
+}
+```
+
+**Response** `200 OK`
+```json
+{
+  "clientSecret": "pi_..._secret_...",
+  "paymentIntentId": "pi_..."
+}
+```
+
+#### Confirm Stripe Payment
+```http
+POST /api/payments/stripe/confirm
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "paymentIntentId": "pi_..."
+}
+```
+
+#### Get PayPal Client ID
+```http
+GET /api/payments/paypal/client-id
+```
+
+**Response** `200 OK`
+```json
+{
+  "clientId": "AWat0j0K..."
+}
+```
+
+#### Create PayPal Order
+```http
+POST /api/payments/paypal/create-order
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "amount": 29.99,
+  "currency": "EUR"
+}
+```
+
+**Response** `200 OK`
+```json
+{
+  "orderId": "5O190127TN364715T",
+  "status": "CREATED"
+}
+```
+
+#### Capture PayPal Order
+```http
+POST /api/payments/paypal/capture-order
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "orderId": "5O190127TN364715T"
+}
+```
+
+**Response** `200 OK`
+```json
+{
+  "success": true,
+  "status": "COMPLETED",
+  "paymentId": "5O190127TN364715T",
+  "captureId": "2GG279541U471931P"
+}
+```
+
+---
+
+### Receipts
+
+#### Download Receipt as PDF
+```http
+GET /api/receipts/:id/download
+Authorization: Bearer <token>
+```
+
+**Response** `200 OK`
+- Content-Type: `application/pdf`
+- Content-Disposition: `attachment; filename=receipt-INV-2024-0001.pdf`
+
+#### Send Receipt via Email
+```http
+POST /api/receipts/:id/email
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "email": "custom@email.com"  // Optional - uses customer email if not provided
+}
+```
+
+**Response** `200 OK`
+```json
+{
+  "message": "Receipt sent successfully to custom@email.com"
+}
+```
+
+---
+
 ### Users (Admin)
 
 #### Get All Users
@@ -299,6 +456,14 @@ Content-Type: application/json
 GET /api/users
 Authorization: Bearer <token>
 ```
+
+**Query Parameters**
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| page | number | Page number |
+| limit | number | Items per page |
+| role | string | Filter by role |
+| search | string | Search by name/email |
 
 #### Create User
 ```http
@@ -352,6 +517,10 @@ Authorization: Bearer <token>
     "value": "15420.50",
     "change": 12.5
   },
+  "totalOrders": {
+    "value": 340,
+    "change": 8.3
+  },
   "averageTransaction": {
     "value": "45.30"
   },
@@ -376,6 +545,10 @@ Authorization: Bearer <token>
     { "method": "card", "count": 45 },
     { "method": "cash", "count": 30 },
     { "method": "paypal", "count": 25 }
+  ],
+  "revenueByDay": [
+    { "date": "2024-01-01", "revenue": 1250.00 },
+    { "date": "2024-01-02", "revenue": 980.50 }
   ]
 }
 ```
@@ -421,16 +594,22 @@ Authorization: Bearer <token>
 
 ---
 
+## Testing
+
+### Test Cards (Stripe)
+- **Success**: `4242 4242 4242 4242`
+- **Decline**: `4000 0000 0000 0002`
+- **Requires Auth**: `4000 0025 0000 3155`
+
+Use any future expiry date and any 3-digit CVC.
+
+### PayPal Sandbox
+Use sandbox accounts from PayPal Developer Dashboard.
+
+---
+
 ## Rate Limiting
 
 Currently no rate limiting is implemented. For production use, consider implementing:
 - 100 requests per minute for authenticated users
 - 20 requests per minute for unauthenticated endpoints
-
----
-
-## Versioning
-
-API versioning is not currently implemented. Future versions will use URL path versioning:
-- `/api/v1/products`
-- `/api/v2/products`

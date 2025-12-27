@@ -10,37 +10,46 @@ A comprehensive grocery store management system built with Node.js, Express, Pos
 
 - **Frontend**: https://trinity-frontend-sd6g.onrender.com
 - **Backend API**: https://trinity-api-d2wo.onrender.com
-- **API Health**: https://trinity-api-d2wo.onrender.com/health
+- **API Docs (Swagger)**: https://trinity-api-d2wo.onrender.com/api-docs
 
 ## 📋 Features
 
 ### For Customers
-- 🛒 Browse and search products
-- ��️ Shopping cart with checkout
-- 💳 Multiple payment methods (Card, PayPal, Cash)
-- 📦 Order history tracking
+- 🛒 Browse and search products with filters
+- 🛍️ Shopping cart with real-time updates
+- 💳 Multiple payment methods (Stripe Card, PayPal Sandbox, Cash)
+- �� Order history tracking
+- 📄 PDF receipt download & email
 - 👤 User registration and profile management
+- 🔐 Password reset via email
 
 ### For Employees
 - 📊 Daily operations dashboard
-- 📋 Order processing
+- 📋 Order processing & management
 - 📦 Inventory overview
 - ⚠️ Low stock alerts
+- 🧾 Invoice management
 
 ### For Managers/Admins
-- 📈 Sales analytics and reports
-- 👥 User management
-- 📦 Product management (CRUD)
-- 🔄 Open Food Facts integration
-- ✅ Order approval (cash payments)
-- 📊 KPI dashboards
+- 📈 Sales analytics with interactive charts
+- 👥 Full user management (CRUD)
+- 📦 Product management with Open Food Facts integration
+- ✅ Cash order approval workflow
+- 📊 Advanced KPI dashboards
+- 📉 Revenue trends & payment distribution charts
+
+### Bonus Features ✨
+- 💳 **Payment Options**: Stripe (EUR), PayPal Sandbox, Cash on Delivery
+- 📄 **PDF Receipts**: Professional PDF generation with pdfkit
+- 📧 **Email Receipts**: Send receipts via Resend API
+- 🎯 **Guided Tour**: Interactive onboarding with React Joyride
+- 🥗 **Nutritional Info**: Product details from Open Food Facts
 
 ## 🏗️ Architecture
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                         FRONTEND                                 │
 │                    (React + Vite + Tailwind)                    │
-│                 https://trinity-frontend-sd6g.onrender.com      │
 └─────────────────────────────────────────────────────────────────┘
                                 │
                                 │ HTTPS / REST API
@@ -48,11 +57,10 @@ A comprehensive grocery store management system built with Node.js, Express, Pos
 ┌─────────────────────────────────────────────────────────────────┐
 │                         BACKEND                                  │
 │                    (Node.js + Express)                          │
-│                 https://trinity-api-d2wo.onrender.com           │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐             │
-│  │   Auth      │  │  Products   │  │  Invoices   │             │
-│  │  (JWT)      │  │   (CRUD)    │  │  (Orders)   │             │
-│  └─────────────┘  └─────────────┘  └─────────────┘             │
+│  ┌─────────┐  ┌─────────┐  ┌─────────┐  ┌─────────┐           │
+│  │  Auth   │  │Products │  │Invoices │  │Payments │           │
+│  │  (JWT)  │  │ (CRUD)  │  │(Orders) │  │(Stripe) │           │
+│  └─────────┘  └─────────┘  └─────────┘  └─────────┘           │
 └─────────────────────────────────────────────────────────────────┘
                                 │
                                 │ Sequelize ORM
@@ -60,39 +68,44 @@ A comprehensive grocery store management system built with Node.js, Express, Pos
 ┌─────────────────────────────────────────────────────────────────┐
 │                       DATABASE                                   │
 │                    (PostgreSQL 15)                              │
-│                    Render Managed                                │
-└─────────────────────────────────────────────────────────────────┘
-                                │
-                                │ External API
-                                ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                   OPEN FOOD FACTS API                           │
-│              (Product Data & Nutrition Info)                    │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
 ## 🛠️ Tech Stack
 
 ### Backend
-- **Runtime**: Node.js 18+
-- **Framework**: Express.js
-- **Database**: PostgreSQL 15
-- **ORM**: Sequelize
-- **Authentication**: JWT (Access + Refresh tokens)
-- **API Documentation**: Swagger/OpenAPI
+| Technology | Purpose |
+|------------|---------|
+| Node.js 18+ | Runtime |
+| Express.js | Web Framework |
+| PostgreSQL 15 | Database |
+| Sequelize | ORM |
+| JWT | Authentication |
+| Stripe | Card Payments |
+| PayPal SDK | PayPal Payments |
+| PDFKit | PDF Generation |
+| Resend | Email Service |
+| Swagger | API Documentation |
 
 ### Frontend
-- **Framework**: React 18
-- **Build Tool**: Vite
-- **Styling**: Tailwind CSS
-- **Routing**: React Router v6
-- **Charts**: Recharts
-- **Icons**: Lucide React
+| Technology | Purpose |
+|------------|---------|
+| React 18 | UI Framework |
+| Vite | Build Tool |
+| Tailwind CSS | Styling |
+| React Router v6 | Routing |
+| Recharts | Data Visualization |
+| Lucide React | Icons |
+| React Joyride | Guided Tours |
+| Stripe.js | Payment UI |
+| PayPal React | PayPal Buttons |
 
 ### DevOps
-- **CI/CD**: GitLab CI/CD
-- **Hosting**: Render.com
-- **Database**: Render PostgreSQL
+| Technology | Purpose |
+|------------|---------|
+| GitLab CI/CD | Pipeline |
+| Render.com | Hosting |
+| Docker | Containerization |
 
 ## 📁 Project Structure
 ```
@@ -101,22 +114,22 @@ trinity-grocery/
 │   ├── src/
 │   │   ├── config/          # Database configuration
 │   │   ├── controllers/     # Route handlers
-│   │   ├── middleware/      # Auth & validation middleware
+│   │   ├── middleware/      # Auth & validation
 │   │   ├── models/          # Sequelize models
 │   │   ├── routes/          # API routes
-│   │   ├── services/        # Business logic & external APIs
-│   │   ├── app.js           # Express app setup
-│   │   └── server.js        # Server entry point
-│   ├── docs/                # API documentation
+│   │   ├── services/        # Business logic
+│   │   ├── app.js           # Express setup
+│   │   └── server.js        # Entry point
 │   └── package.json
 ├── frontend/
 │   ├── src/
 │   │   ├── components/      # Reusable components
-│   │   ├── context/         # React context (Auth)
+│   │   ├── context/         # Auth & Cart context
 │   │   ├── pages/           # Page components
-│   │   ├── services/        # API service functions
-│   │   └── App.jsx          # Main app component
+│   │   ├── services/        # API services
+│   │   └── App.jsx          # Main app
 │   └── package.json
+├── docs/                    # Documentation
 ├── .gitlab-ci.yml           # CI/CD pipeline
 └── README.md
 ```
@@ -141,7 +154,7 @@ cd trinity-grocery
 cd backend
 npm install
 cp .env.example .env
-# Edit .env with your database credentials
+# Edit .env with your credentials
 npm run dev
 ```
 
@@ -150,7 +163,6 @@ npm run dev
 cd frontend
 npm install
 cp .env.example .env
-# Edit .env with API URL
 npm run dev
 ```
 
@@ -165,13 +177,32 @@ npm run dev
 ```env
 NODE_ENV=development
 PORT=5000
+
+# Database
 DB_HOST=localhost
 DB_PORT=5432
 DB_NAME=trinity_db
 DB_USER=postgres
 DB_PASSWORD=your_password
+
+# JWT
 JWT_SECRET=your-jwt-secret
 JWT_REFRESH_SECRET=your-refresh-secret
+
+# Stripe
+STRIPE_PUBLISHABLE_KEY=pk_test_...
+STRIPE_SECRET_KEY=sk_test_...
+
+# PayPal
+PAYPAL_CLIENT_ID=your-client-id
+PAYPAL_SECRET=your-secret
+PAYPAL_MODE=sandbox
+
+# Email (Resend)
+RESEND_API_KEY=re_...
+
+# Frontend URL
+FRONTEND_URL=http://localhost:5173
 ```
 
 #### Frontend (.env)
@@ -181,50 +212,75 @@ VITE_API_URL=http://localhost:5000/api
 
 ## 📚 API Documentation
 
-See [docs/API_SPECS.md](docs/API_SPECS.md) for complete API documentation.
+Interactive API documentation available at `/api-docs` (Swagger UI).
 
 ### Quick API Reference
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/auth/register` | Register new user |
-| POST | `/api/auth/login` | Login user |
-| GET | `/api/products` | Get all products |
-| POST | `/api/products` | Create product |
-| GET | `/api/invoices` | Get all invoices |
-| POST | `/api/invoices` | Create invoice/order |
-| GET | `/api/reports/kpis` | Get dashboard KPIs |
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| POST | `/api/auth/register` | Register user | No |
+| POST | `/api/auth/login` | Login | No |
+| POST | `/api/password/forgot` | Request password reset | No |
+| POST | `/api/password/reset` | Reset password | No |
+| GET | `/api/products` | List products | Yes |
+| POST | `/api/products` | Create product | Manager+ |
+| GET | `/api/invoices` | List invoices | Manager+ |
+| GET | `/api/invoices/my-orders` | My orders | Customer |
+| POST | `/api/invoices` | Create order | Yes |
+| GET | `/api/payments/stripe/key` | Stripe key | No |
+| POST | `/api/payments/stripe/create-payment-intent` | Create payment | Yes |
+| GET | `/api/payments/paypal/client-id` | PayPal client ID | No |
+| POST | `/api/payments/paypal/create-order` | Create PayPal order | Yes |
+| GET | `/api/receipts/:id/download` | Download PDF | Yes |
+| POST | `/api/receipts/:id/email` | Email receipt | Yes |
+| GET | `/api/reports/kpis` | Dashboard KPIs | Manager+ |
+| GET | `/api/users` | List users | Admin |
 
 ## 👥 User Roles
 
 | Role | Permissions |
 |------|-------------|
-| **Customer** | Browse products, place orders, view own orders |
-| **Employee** | View orders, view inventory, process orders |
-| **Manager** | All employee permissions + manage products, approve orders, view reports |
-| **Admin** | All permissions + manage users |
+| **Customer** | Browse products, place orders, view own orders, download receipts |
+| **Employee** | + View all orders, inventory, process orders |
+| **Manager** | + CRUD products, approve cash orders, view reports, import from OFF |
+| **Admin** | + Full user management |
+
+## 💳 Payment Testing
+
+### Stripe Test Cards
+| Card Number | Result |
+|-------------|--------|
+| `4242 4242 4242 4242` | Success |
+| `4000 0000 0000 0002` | Decline |
+| `4000 0025 0000 3155` | Requires Auth |
+
+Use any future expiry date and any 3-digit CVC.
+
+### PayPal Sandbox
+Use sandbox buyer account from PayPal Developer Dashboard.
 
 ## 🔐 Authentication
 
-The API uses JWT-based authentication:
-- **Access Token**: Valid for 15 minutes
-- **Refresh Token**: Valid for 7 days
-
-Include the token in requests:
-```
-Authorization: Bearer <access_token>
-```
+JWT-based authentication with:
+- **Access Token**: 15 minutes expiry
+- **Refresh Token**: 7 days expiry
 
 ## 📊 CI/CD Pipeline
 ```
 ┌─────────┐    ┌─────────┐    ┌─────────┐
 │  BUILD  │───▶│  TEST   │───▶│ DEPLOY  │
 └─────────┘    └─────────┘    └─────────┘
-     │              │              │
-     ▼              ▼              ▼
- npm install    Run tests    Render.com
- npm build      Lint code    (via webhook)
 ```
+
+- **Build**: Install dependencies, build frontend
+- **Test**: Linting, unit tests
+- **Deploy**: Auto-deploy to Render.com
+
+## 📄 Documentation
+
+- [API Specifications](docs/API_SPECS.md)
+- [System Architecture](docs/ARCHITECTURE.md)
+- [UML Diagrams](docs/UML_DIAGRAMS.md)
 
 ## 🤝 Contributing
 
@@ -242,7 +298,8 @@ This project is licensed under the MIT License.
 
 **Elie Zayla**
 - GitLab: [@eliezaylaa](https://gitlab.com/eliezaylaa)
+- School: EPITECH Digital Paris
 
 ---
 
-Made with ❤️ for EPITECH Paris
+Made with ❤️ for EPITECH Paris MSc IT Program
