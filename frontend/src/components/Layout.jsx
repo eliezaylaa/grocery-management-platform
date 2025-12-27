@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
-import { Outlet, NavLink, useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
-import { useCart } from '../context/CartContext';
-import { GuidedTour } from './GuidedTour';
+import React, { useState } from "react";
+import { Outlet, NavLink, useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
+import { useCart } from "../context/CartContext";
+import { GuidedTour } from "./GuidedTour";
 import {
   LayoutDashboard,
   Package,
@@ -16,8 +16,8 @@ import {
   ShoppingBag,
   ClipboardList,
   HelpCircle,
-  ChevronDown
-} from 'lucide-react';
+  ChevronDown,
+} from "lucide-react";
 
 export const Layout = () => {
   const { user, logout } = useAuth();
@@ -28,7 +28,7 @@ export const Layout = () => {
 
   const handleLogout = () => {
     logout();
-    navigate('/login');
+    navigate("/login");
   };
 
   const handleStartTour = () => {
@@ -41,31 +41,56 @@ export const Layout = () => {
   const getNavItems = () => {
     const role = user?.role;
 
-    if (role === 'customer') {
+    if (role === "customer") {
       return [
-        { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
-        { to: '/shop', icon: ShoppingBag, label: 'Shop', tourId: 'nav-shop' },
-        { to: '/my-orders', icon: ClipboardList, label: 'My Orders', tourId: 'nav-my-orders' },
+        { to: "/", icon: LayoutDashboard, label: "Dashboard" },
+        { to: "/shop", icon: ShoppingBag, label: "Shop", tourId: "nav-shop" },
+        {
+          to: "/my-orders",
+          icon: ClipboardList,
+          label: "My Orders",
+          tourId: "nav-my-orders",
+        },
       ];
     }
 
-    if (role === 'employee') {
+    if (role === "employee") {
       return [
-        { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
-        { to: '/shop', icon: ShoppingBag, label: 'Shop', tourId: 'nav-shop' },
-        { to: '/invoices', icon: FileText, label: 'Invoices', tourId: 'nav-invoices' },
-        { to: '/my-orders', icon: ClipboardList, label: 'My Orders' },
+        { to: "/", icon: LayoutDashboard, label: "Dashboard" },
+        { to: "/shop", icon: ShoppingBag, label: "Shop", tourId: "nav-shop" },
+        {
+          to: "/invoices",
+          icon: FileText,
+          label: "Invoices",
+          tourId: "nav-invoices",
+        },
+        { to: "/my-orders", icon: ClipboardList, label: "My Orders" },
       ];
     }
 
     // Admin & Manager
     return [
-      { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
-      { to: '/products', icon: Package, label: 'Products', tourId: 'nav-products' },
-      { to: '/invoices', icon: FileText, label: 'Invoices', tourId: 'nav-invoices' },
-      { to: '/reports', icon: BarChart3, label: 'Reports', tourId: 'nav-reports' },
-      { to: '/users', icon: Users, label: 'Users', tourId: 'nav-users' },
-      { to: '/shop', icon: ShoppingBag, label: 'Shop' },
+      { to: "/", icon: LayoutDashboard, label: "Dashboard" },
+      {
+        to: "/products",
+        icon: Package,
+        label: "Products",
+        tourId: "nav-products",
+      },
+      {
+        to: "/invoices",
+        icon: FileText,
+        label: "Invoices",
+        tourId: "nav-invoices",
+      },
+      {
+        to: "/reports",
+        icon: BarChart3,
+        label: "Reports",
+        tourId: "nav-reports",
+      },
+      { to: "/users", icon: Users, label: "Users", tourId: "nav-users" },
+      { to: "/shop", icon: ShoppingBag, label: "Shop" },
     ];
   };
 
@@ -73,10 +98,14 @@ export const Layout = () => {
 
   const getRoleBadgeColor = () => {
     switch (user?.role) {
-      case 'admin': return 'bg-red-100 text-red-700';
-      case 'manager': return 'bg-purple-100 text-purple-700';
-      case 'employee': return 'bg-green-100 text-green-700';
-      default: return 'bg-blue-100 text-blue-700';
+      case "admin":
+        return "bg-red-100 text-red-700";
+      case "manager":
+        return "bg-purple-100 text-purple-700";
+      case "employee":
+        return "bg-green-100 text-green-700";
+      default:
+        return "bg-blue-100 text-blue-700";
     }
   };
 
@@ -89,10 +118,16 @@ export const Layout = () => {
         <button onClick={() => setSidebarOpen(true)} className="text-gray-600">
           <Menu size={24} />
         </button>
-        <button onClick={() => navigate('/')} className="font-bold text-lg text-blue-600">
-          🛒 Trinity Grocery
+        <button
+          onClick={() => navigate("/")}
+          className="font-bold text-lg text-blue-600"
+        >
+           Trinity
         </button>
-        <button onClick={() => navigate('/cart')} className="text-gray-600 relative">
+        <button
+          onClick={() => navigate("/cart")}
+          className="text-gray-600 relative"
+        >
           <ShoppingCart size={24} />
           {cartCount > 0 && (
             <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center">
@@ -105,14 +140,26 @@ export const Layout = () => {
       {/* Mobile Sidebar Overlay */}
       {sidebarOpen && (
         <div className="lg:hidden fixed inset-0 z-50 flex">
-          <div className="fixed inset-0 bg-black bg-opacity-50" onClick={() => setSidebarOpen(false)} />
+          <div
+            className="fixed inset-0 bg-black bg-opacity-50"
+            onClick={() => setSidebarOpen(false)}
+          />
           <div className="relative bg-white w-72 p-6">
-            <button onClick={() => setSidebarOpen(false)} className="absolute top-4 right-4 text-gray-500">
+            <button
+              onClick={() => setSidebarOpen(false)}
+              className="absolute top-4 right-4 text-gray-500"
+            >
               <X size={24} />
             </button>
             <div className="mb-8">
-              <button onClick={() => { navigate('/'); setSidebarOpen(false); }} className="text-xl font-bold text-blue-600">
-                🛒 Trinity Grocery
+              <button
+                onClick={() => {
+                  navigate("/");
+                  setSidebarOpen(false);
+                }}
+                className="text-xl font-bold text-blue-600"
+              >
+                Trinity
               </button>
             </div>
             <nav className="space-y-2">
@@ -125,8 +172,8 @@ export const Layout = () => {
                   className={({ isActive }) =>
                     `flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
                       isActive
-                        ? 'bg-blue-50 text-blue-700'
-                        : 'text-gray-600 hover:bg-gray-100'
+                        ? "bg-blue-50 text-blue-700"
+                        : "text-gray-600 hover:bg-gray-100"
                     }`
                   }
                 >
@@ -143,11 +190,11 @@ export const Layout = () => {
         {/* Desktop Sidebar */}
         <aside className="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 bg-white border-r border-gray-200">
           <div className="p-6">
-            <button 
-              onClick={() => navigate('/')} 
+            <button
+              onClick={() => navigate("/")}
               className="text-xl font-bold text-blue-600 hover:text-blue-700 transition-colors"
             >
-              🛒 Trinity Grocery
+              Trinity 
             </button>
           </div>
           <nav className="flex-1 px-4 space-y-1">
@@ -159,8 +206,8 @@ export const Layout = () => {
                 className={({ isActive }) =>
                   `flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
                     isActive
-                      ? 'bg-blue-50 text-blue-700 font-medium'
-                      : 'text-gray-600 hover:bg-gray-100'
+                      ? "bg-blue-50 text-blue-700 font-medium"
+                      : "text-gray-600 hover:bg-gray-100"
                   }`
                 }
               >
@@ -186,7 +233,7 @@ export const Layout = () => {
             <div className="flex items-center justify-between">
               <div data-tour="dashboard-stats">
                 <h2 className="text-lg font-semibold text-gray-900">
-                  Hello, {user?.firstName || 'there'}
+                  Hello, {user?.firstName || "there"}
                 </h2>
               </div>
               <div className="flex items-center gap-2">
@@ -201,7 +248,7 @@ export const Layout = () => {
                 </button>
 
                 <button
-                  onClick={() => navigate('/cart')}
+                  onClick={() => navigate("/cart")}
                   className="relative flex items-center gap-2 px-3 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
                   title="View Cart"
                   data-tour="header-cart"
@@ -220,13 +267,17 @@ export const Layout = () => {
                     className="flex items-center gap-3 px-3 py-2 hover:bg-gray-100 rounded-lg transition-colors"
                   >
                     <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white font-medium">
-                      {user?.firstName?.charAt(0) || user?.email?.charAt(0)?.toUpperCase() || 'U'}
+                      {user?.firstName?.charAt(0) ||
+                        user?.email?.charAt(0)?.toUpperCase() ||
+                        "U"}
                     </div>
                     <div className="hidden sm:block text-left">
                       <p className="text-sm font-medium text-gray-900">
-                        {user?.firstName || user?.email?.split('@')[0]}
+                        {user?.firstName || user?.email?.split("@")[0]}
                       </p>
-                      <span className={`text-xs px-2 py-0.5 rounded-full ${getRoleBadgeColor()}`}>
+                      <span
+                        className={`text-xs px-2 py-0.5 rounded-full ${getRoleBadgeColor()}`}
+                      >
                         {user?.role}
                       </span>
                     </div>
@@ -235,11 +286,18 @@ export const Layout = () => {
 
                   {userMenuOpen && (
                     <>
-                      <div className="fixed inset-0 z-10" onClick={() => setUserMenuOpen(false)} />
+                      <div
+                        className="fixed inset-0 z-10"
+                        onClick={() => setUserMenuOpen(false)}
+                      />
                       <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-20">
                         <div className="px-4 py-2 border-b border-gray-100">
-                          <p className="text-sm font-medium text-gray-900">{user?.email}</p>
-                          <p className="text-xs text-gray-500 capitalize">{user?.role}</p>
+                          <p className="text-sm font-medium text-gray-900">
+                            {user?.email}
+                          </p>
+                          <p className="text-xs text-gray-500 capitalize">
+                            {user?.role}
+                          </p>
                         </div>
                         <button
                           onClick={handleLogout}
