@@ -86,6 +86,13 @@ export const LoginPage = () => {
             </div>
           </div>
 
+          {/* Forgot Password Link */}
+          <div className="text-right">
+            <Link to="/forgot-password" className="text-sm text-gray-500 hover:text-blue-600">
+              Forgot your password?
+            </Link>
+          </div>
+
           {/* Submit Button */}
           <button
             type="submit"
@@ -105,17 +112,14 @@ export const LoginPage = () => {
             )}
           </button>
 
-          {/* Register & Forgot Password Links */}
-          <div className="text-center pt-4 border-t border-gray-200 space-y-3">
+          {/* Register Link */}
+          <div className="text-center pt-4 border-t border-gray-200">
             <p className="text-gray-600">
               Don't have an account?{' '}
               <Link to="/register" className="text-blue-600 hover:text-blue-800 font-semibold">
                 Create one
               </Link>
             </p>
-            <Link to="/forgot-password" className="text-sm text-gray-500 hover:text-blue-600">
-              Forgot your password?
-            </Link>
           </div>
         </form>
       </div>

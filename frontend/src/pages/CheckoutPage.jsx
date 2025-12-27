@@ -5,6 +5,7 @@ import { Elements, CardElement, useStripe, useElements } from '@stripe/react-str
 import { PayPalScriptProvider, PayPalButtons } from '@paypal/react-paypal-js';
 import { paymentService } from '../services/paymentService';
 import { invoiceService } from '../services/invoiceService';
+import { useCart } from '../context/CartContext';
 import { ShoppingCart, CreditCard, Truck, CheckCircle, AlertCircle, Loader2, ArrowLeft, Clock } from 'lucide-react';
 
 // Stripe Card Form Component
@@ -96,7 +97,8 @@ const StripeCardForm = ({ amount, onSuccess, onError }) => {
 // Main Checkout Page
 export const CheckoutPage = () => {
   const navigate = useNavigate();
-  const [cart, setCart] = useState([]);
+  const { getCart, clearCart } = useCart();
+  const cart = getCart();
   const [loading, setLoading] = useState(true);
   const [stripePromise, setStripePromise] = useState(null);
   const [paypalClientId, setPaypalClientId] = useState(null);
@@ -107,14 +109,8 @@ export const CheckoutPage = () => {
   const [processing, setProcessing] = useState(false);
 
   useEffect(() => {
-    loadCart();
     loadPaymentKeys();
   }, []);
-
-  const loadCart = () => {
-    const savedCart = JSON.parse(localStorage.getItem('cart') || '[]');
-    setCart(savedCart);
-  };
 
   const loadPaymentKeys = async () => {
     try {
@@ -139,8 +135,6 @@ export const CheckoutPage = () => {
     try {
       setProcessing(true);
       
-      // Cash payments are PENDING until manager approves
-      // Card and PayPal payments are COMPLETED immediately
       const paymentStatus = method === 'cash' ? 'pending' : 'completed';
       
       const orderData = {
@@ -155,8 +149,7 @@ export const CheckoutPage = () => {
 
       const response = await invoiceService.create(orderData);
       
-      localStorage.removeItem('cart');
-      window.dispatchEvent(new Event('cartUpdated'));
+      clearCart();
       
       setOrderDetails({ ...response.invoice, paymentMethod: method });
       setOrderComplete(true);
@@ -404,7 +397,7 @@ export const CheckoutPage = () => {
             </Elements>
           )}
 
-          {/* PayPal Payment - Only PayPal account, NO card option */}
+          {/* PayPal Payment */}
           {paymentMethod === 'paypal' && paypalClientId && (
             <PayPalScriptProvider 
               options={{ 

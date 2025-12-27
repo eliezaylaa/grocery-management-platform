@@ -28,7 +28,7 @@ exports.createStripePaymentIntent = async (req, res) => {
     }
 
     const paymentIntent = await stripe.paymentIntents.create({
-      amount: Math.round(amount * 100), // Stripe uses cents
+      amount: Math.round(amount * 100),
       currency: currency,
       metadata: {
         userId: req.user.id

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { productService } from '../services/productService';
 import { ProductDetailModal } from '../components/ProductDetailModal';
+import { useCart } from '../context/CartContext';
 import { Search, Filter, ShoppingCart, Plus, ChevronDown, X, Clock, Package } from 'lucide-react';
 
 export const ShopPage = () => {
@@ -10,8 +11,11 @@ export const ShopPage = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
   const [showFilters, setShowFilters] = useState(false);
-  const [cart, setCart] = useState([]);
   const [selectedProduct, setSelectedProduct] = useState(null);
+  
+  // Use CartContext instead of local state
+  const { addToCart, getCart, updateQuantity } = useCart();
+  const cart = getCart();
   
   const [filters, setFilters] = useState({
     category: '',
@@ -26,11 +30,6 @@ export const ShopPage = () => {
     categories: [],
     brands: []
   });
-
-  useEffect(() => {
-    const savedCart = JSON.parse(localStorage.getItem('cart') || '[]');
-    setCart(savedCart);
-  }, []);
 
   useEffect(() => {
     loadProducts();
@@ -57,38 +56,17 @@ export const ShopPage = () => {
     }
   };
 
-  const addToCart = (product) => {
+  const handleAddToCart = (product) => {
     if (product.stockQuantity === 0) return;
     
-    const existingIndex = cart.findIndex(item => item.id === product.id);
-    let newCart;
+    const currentQty = getCartQuantity(product.id);
+    if (currentQty >= product.stockQuantity) return;
     
-    if (existingIndex >= 0) {
-      newCart = [...cart];
-      if (newCart[existingIndex].quantity < product.stockQuantity) {
-        newCart[existingIndex].quantity += 1;
-      }
-    } else {
-      newCart = [...cart, { ...product, quantity: 1 }];
-    }
-    
-    setCart(newCart);
-    localStorage.setItem('cart', JSON.stringify(newCart));
-    window.dispatchEvent(new Event('cartUpdated'));
+    addToCart(product, 1);
   };
 
-  const updateCartQuantity = (productId, newQuantity) => {
-    let newCart;
-    if (newQuantity <= 0) {
-      newCart = cart.filter(item => item.id !== productId);
-    } else {
-      newCart = cart.map(item => 
-        item.id === productId ? { ...item, quantity: newQuantity } : item
-      );
-    }
-    setCart(newCart);
-    localStorage.setItem('cart', JSON.stringify(newCart));
-    window.dispatchEvent(new Event('cartUpdated'));
+  const handleUpdateQuantity = (productId, newQuantity) => {
+    updateQuantity(productId, newQuantity);
   };
 
   const getCartQuantity = (productId) => {
@@ -284,7 +262,7 @@ export const ShopPage = () => {
                   
                   <div className="mt-3 flex items-center justify-between">
                     <span className="text-2xl font-bold text-blue-600">
-                      ${parseFloat(product.price).toFixed(2)}
+                      €{parseFloat(product.price).toFixed(2)}
                     </span>
                     {product.stockQuantity > 0 ? (
                       <span className="text-sm text-green-600">
@@ -324,7 +302,7 @@ export const ShopPage = () => {
                           {getCartQuantity(product.id)} in cart
                         </span>
                         <button
-                          onClick={() => addToCart(product)}
+                          onClick={() => handleAddToCart(product)}
                           disabled={getCartQuantity(product.id) >= product.stockQuantity}
                           className="bg-blue-600 text-white p-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
@@ -333,7 +311,7 @@ export const ShopPage = () => {
                       </div>
                     ) : (
                       <button
-                        onClick={() => addToCart(product)}
+                        onClick={() => handleAddToCart(product)}
                         className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700"
                       >
                         <ShoppingCart size={20} />
@@ -374,8 +352,8 @@ export const ShopPage = () => {
           product={selectedProduct}
           onClose={() => setSelectedProduct(null)}
           cartQuantity={getCartQuantity(selectedProduct.id)}
-          onAddToCart={addToCart}
-          onUpdateQuantity={updateCartQuantity}
+          onAddToCart={handleAddToCart}
+          onUpdateQuantity={handleUpdateQuantity}
         />
       )}
     </div>

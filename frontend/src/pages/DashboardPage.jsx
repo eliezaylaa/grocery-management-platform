@@ -77,12 +77,12 @@ const ManagerDashboard = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4" data-tour="dashboard-stats">
         <div className="bg-white rounded-lg p-5 shadow-sm border border-gray-100">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Revenue</p>
-              <p className="text-2xl font-semibold text-gray-900 mt-1">${kpis.totalRevenue?.value || '0'}</p>
+              <p className="text-2xl font-semibold text-gray-900 mt-1">€{kpis.totalRevenue?.value || '0'}</p>
               {kpis.totalRevenue?.change !== 0 && (
                 <p className={`text-xs mt-1 ${parseFloat(kpis.totalRevenue?.change) >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
                   {parseFloat(kpis.totalRevenue?.change) >= 0 ? '↑' : '↓'} {Math.abs(kpis.totalRevenue?.change || 0)}%
@@ -125,8 +125,8 @@ const ManagerDashboard = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Avg. Order</p>
-              <p className="text-2xl font-semibold text-gray-900 mt-1">${kpis.averageTransaction?.value || '0'}</p>
-              <p className="text-xs text-gray-500 mt-1">Median: ${kpis.medianPayment || '0'}</p>
+              <p className="text-2xl font-semibold text-gray-900 mt-1">€{kpis.averageTransaction?.value || '0'}</p>
+              <p className="text-xs text-gray-500 mt-1">Median: €{kpis.medianPayment || '0'}</p>
             </div>
             <div className="w-10 h-10 bg-amber-50 rounded-lg flex items-center justify-center">
               <TrendingUp size={20} className="text-amber-600" />
@@ -149,10 +149,10 @@ const ManagerDashboard = () => {
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                 <XAxis dataKey="dayName" tick={{ fontSize: 12 }} stroke="#9CA3AF" />
-                <YAxis tick={{ fontSize: 12 }} stroke="#9CA3AF" tickFormatter={(v) => `$${v}`} />
+                <YAxis tick={{ fontSize: 12 }} stroke="#9CA3AF" tickFormatter={(v) => `€${v}`} />
                 <Tooltip 
                   contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb' }}
-                  formatter={(value) => [`$${value}`, 'Revenue']}
+                  formatter={(value) => [`€${value}`, 'Revenue']}
                 />
                 <Area type="monotone" dataKey="revenue" stroke="#6366F1" strokeWidth={2} fill="url(#colorRevenue)" />
               </AreaChart>
@@ -200,7 +200,7 @@ const ManagerDashboard = () => {
                       <div className="w-3 h-3 rounded-full" style={{ backgroundColor: entry.color }}></div>
                       <span className="text-gray-600">{entry.name}</span>
                     </div>
-                    <span className="font-medium">{entry.value} · ${entry.total.toFixed(0)}</span>
+                    <span className="font-medium">{entry.value} · €{entry.total.toFixed(0)}</span>
                   </div>
                 ))}
               </div>
@@ -285,17 +285,17 @@ const ManagerDashboard = () => {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
           <div>
             <p className="text-gray-400 text-xs uppercase">Today</p>
-            <p className="text-xl font-semibold mt-1">${kpis.today?.revenue || '0'}</p>
+            <p className="text-xl font-semibold mt-1">€{kpis.today?.revenue || '0'}</p>
             <p className="text-gray-400 text-xs">{kpis.today?.orders || 0} orders</p>
           </div>
           <div>
             <p className="text-gray-400 text-xs uppercase">24h Avg</p>
-            <p className="text-xl font-semibold mt-1">${kpis.last24Hours?.averagePurchase || '0'}</p>
+            <p className="text-xl font-semibold mt-1">€{kpis.last24Hours?.averagePurchase || '0'}</p>
             <p className="text-gray-400 text-xs">per order</p>
           </div>
           <div>
             <p className="text-gray-400 text-xs uppercase">This Week</p>
-            <p className="text-xl font-semibold mt-1">${kpis.salesGrowth?.thisWeek || '0'}</p>
+            <p className="text-xl font-semibold mt-1">€{kpis.salesGrowth?.thisWeek || '0'}</p>
             <p className={`text-xs ${parseFloat(kpis.salesGrowth?.growthRate) >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
               {parseFloat(kpis.salesGrowth?.growthRate) >= 0 ? '↑' : '↓'} {Math.abs(parseFloat(kpis.salesGrowth?.growthRate || 0))}%
             </p>
@@ -404,7 +404,7 @@ const EmployeeDashboard = () => {
                 <p className="text-xs text-gray-500">{order.user?.firstName || 'Customer'}</p>
               </div>
               <div className="text-right">
-                <p className="font-medium text-sm">${parseFloat(order.totalAmount).toFixed(2)}</p>
+                <p className="font-medium text-sm">€{parseFloat(order.totalAmount).toFixed(2)}</p>
                 <span className={`text-xs px-2 py-0.5 rounded-full ${
                   order.paymentStatus === 'completed' ? 'bg-emerald-50 text-emerald-600' :
                   order.paymentStatus === 'pending' ? 'bg-amber-50 text-amber-600' : 'bg-gray-50 text-gray-600'
@@ -455,13 +455,21 @@ const CustomerDashboard = () => {
         <p className="text-gray-500 text-sm mt-1">Your shopping dashboard</p>
       </div>
 
-      {/* Shop Now & My Orders Buttons */}
+      {/* Shop Now & My Orders Buttons with tour targets */}
       <div className="grid grid-cols-2 gap-4">
-        <button onClick={() => navigate('/shop')} className="bg-blue-600 text-white rounded-lg p-5 text-left hover:bg-blue-700 transition-colors">
+        <button 
+          onClick={() => navigate('/shop')} 
+          data-tour="shop-now"
+          className="bg-blue-600 text-white rounded-lg p-5 text-left hover:bg-blue-700 transition-colors"
+        >
           <ShoppingCart size={24} className="mb-3" />
           <p className="font-medium">Shop Now</p>
         </button>
-        <button onClick={() => navigate('/my-orders')} className="bg-white rounded-lg p-5 shadow-sm border border-gray-100 text-left hover:border-gray-300">
+        <button 
+          onClick={() => navigate('/my-orders')} 
+          data-tour="my-orders"
+          className="bg-white rounded-lg p-5 shadow-sm border border-gray-100 text-left hover:border-gray-300"
+        >
           <Package size={24} className="text-gray-400 mb-3" />
           <p className="font-medium text-gray-900">My Orders</p>
         </button>
