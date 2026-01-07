@@ -316,10 +316,8 @@ This project is licensed under the Epitech License.
 
 ## Developers
 
-**Elie Zaylaa**
+**Elie Zaylaa & Momodou Jallow**
 
 - GitLab: [@eliezaylaa](https://gitlab.com/eliezaylaa)
-  **Momodou Jallow**
-- GitLab: [@momodoujallow](https://gitlab.com/momodoujallow)
 
 ---
