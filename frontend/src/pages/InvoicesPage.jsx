@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { invoiceService } from '../services/invoiceService';
 import { receiptService } from '../services/receiptService';
+import { useAuth } from '../context/AuthContext';
 import { 
   Search, Filter, Eye, CheckCircle, XCircle, Clock, 
   CreditCard, Banknote, Wallet, Package, X, Download, 
-  Mail, Loader2, AlertCircle
+  Mail, Loader2, AlertCircle, Trash2
 } from 'lucide-react';
 
 export const InvoicesPage = () => {
+  const { user } = useAuth();
   const [invoices, setInvoices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -17,6 +19,7 @@ export const InvoicesPage = () => {
   const [emailing, setEmailing] = useState(null);
   const [emailSuccess, setEmailSuccess] = useState(null);
   const [emailError, setEmailError] = useState(null);
+  const [deleting, setDeleting] = useState(null);
 
   useEffect(() => {
     loadInvoices();
@@ -73,6 +76,23 @@ export const InvoicesPage = () => {
       setTimeout(() => setEmailError(null), 5000);
     } finally {
       setEmailing(null);
+    }
+  };
+
+  const handleDelete = async (invoiceId, e) => {
+    if (e) e.stopPropagation();
+    if (!confirm('Are you sure you want to delete this invoice? This action cannot be undone.')) {
+      return;
+    }
+    setDeleting(invoiceId);
+    try {
+      await invoiceService.delete(invoiceId);
+      loadInvoices();
+      setSelectedInvoice(null);
+    } catch (error) {
+      alert(error.response?.data?.error || 'Failed to delete invoice');
+    } finally {
+      setDeleting(null);
     }
   };
 
@@ -273,6 +293,20 @@ export const InvoicesPage = () => {
                           <Mail size={18} />
                         )}
                       </button>
+                      {user?.role === 'admin' && (
+                        <button
+                          onClick={(e) => handleDelete(invoice.id, e)}
+                          disabled={deleting === invoice.id}
+                          className="p-2 text-red-600 hover:bg-red-50 rounded-lg disabled:opacity-50"
+                          title="Delete Invoice"
+                        >
+                          {deleting === invoice.id ? (
+                            <Loader2 size={18} className="animate-spin" />
+                          ) : (
+                            <Trash2 size={18} />
+                          )}
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -297,9 +331,12 @@ export const InvoicesPage = () => {
           onStatusUpdate={handleStatusUpdate}
           onDownload={handleDownloadPDF}
           onEmail={handleSendEmail}
+          onDelete={handleDelete}
           downloading={downloading}
           emailing={emailing}
           emailSuccess={emailSuccess}
+          deleting={deleting}
+          isAdmin={user?.role === 'admin'}
         />
       )}
     </div>
@@ -307,7 +344,7 @@ export const InvoicesPage = () => {
 };
 
 // Invoice Detail Modal
-const InvoiceDetailModal = ({ invoice, onClose, onStatusUpdate, onDownload, onEmail, downloading, emailing, emailSuccess }) => {
+const InvoiceDetailModal = ({ invoice, onClose, onStatusUpdate, onDownload, onEmail, onDelete, downloading, emailing, emailSuccess, deleting, isAdmin }) => {
   const getStatusBadge = (status) => {
     const styles = {
       completed: 'bg-green-100 text-green-700',
@@ -394,7 +431,7 @@ const InvoiceDetailModal = ({ invoice, onClose, onStatusUpdate, onDownload, onEm
 
         {/* Actions */}
         <div className="p-6 space-y-3">
-          {/* PDF & Email Buttons */}
+          {/* PDF, Email & Delete Buttons */}
           <div className="flex gap-3">
             <button
               onClick={() => onDownload(invoice.id)}
@@ -426,6 +463,19 @@ const InvoiceDetailModal = ({ invoice, onClose, onStatusUpdate, onDownload, onEm
               )}
               {emailSuccess === invoice.id ? 'Sent!' : 'Email Receipt'}
             </button>
+            {isAdmin && (
+              <button
+                onClick={() => onDelete(invoice.id)}
+                disabled={deleting === invoice.id}
+                className="flex items-center justify-center gap-2 px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
+              >
+                {deleting === invoice.id ? (
+                  <Loader2 size={20} className="animate-spin" />
+                ) : (
+                  <Trash2 size={20} />
+                )}
+              </button>
+            )}
           </div>
 
           {/* Status Update Buttons for Pending Orders */}
