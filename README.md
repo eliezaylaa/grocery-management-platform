@@ -318,6 +318,6 @@ This project is licensed under the Epitech License.
 
 **Elie Zaylaa & Momodou Jallow**
 
-- GitLab: [@eliezaylaa](https://gitlab.com/eliezaylaa)
+GitLab: [@eliezaylaa](https://gitlab.com/eliezaylaa)
 
 ---
