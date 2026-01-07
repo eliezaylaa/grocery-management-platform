@@ -5,6 +5,13 @@ export const ProductDetailModal = ({ product, onClose, cartQuantity = 0, onAddTo
   if (!product) return null;
 
   const isOutOfStock = product.stockQuantity === 0;
+  
+  // Extract nutrition info from the nutritionalInfo JSON field
+  const nutrition = product.nutritionalInfo || {};
+  const hasNutrition = nutrition && (
+    nutrition.energy_kcal || nutrition.proteins || nutrition.carbohydrates || 
+    nutrition.fat || nutrition.fiber || nutrition.sugars || nutrition.salt
+  );
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
@@ -36,7 +43,7 @@ export const ProductDetailModal = ({ product, onClose, cartQuantity = 0, onAddTo
               </div>
 
               <div className="text-3xl font-bold text-blue-600">
-                ${parseFloat(product.price).toFixed(2)}
+                €{parseFloat(product.price).toFixed(2)}
               </div>
 
               <div className="flex items-center gap-2">
@@ -48,20 +55,6 @@ export const ProductDetailModal = ({ product, onClose, cartQuantity = 0, onAddTo
                   <span className="px-3 py-1 bg-emerald-100 text-emerald-600 rounded-full text-sm font-medium">In Stock - {product.stockQuantity} available</span>
                 )}
               </div>
-
-              {product.category && (
-                <div>
-                  <span className="text-sm text-gray-500">Category: </span>
-                  <span className="text-sm font-medium text-gray-700">{product.category}</span>
-                </div>
-              )}
-
-              {product.barcode && (
-                <div>
-                  <span className="text-sm text-gray-500">Barcode: </span>
-                  <span className="text-sm font-medium text-gray-700">{product.barcode}</span>
-                </div>
-              )}
 
               {product.description && (
                 <div className="pt-2">
@@ -106,68 +99,88 @@ export const ProductDetailModal = ({ product, onClose, cartQuantity = 0, onAddTo
             </div>
           </div>
 
-          {(product.calories || product.proteins || product.carbs || product.fat || product.fiber) && (
+          {/* Nutrition Information */}
+          {hasNutrition && (
             <div className="mt-6 pt-6 border-t">
               <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                <Flame size={18} className="text-orange-500" />
-                Nutrition Information (per 100g)
+                Nutrition Information 
               </h3>
-              <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
-                {product.calories !== undefined && product.calories !== null && (
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {nutrition.energy_kcal !== undefined && nutrition.energy_kcal !== null && (
                   <div className="bg-orange-50 rounded-lg p-3 text-center">
-                    <p className="text-2xl font-bold text-orange-600">{product.calories}</p>
-                    <p className="text-xs text-gray-500">kcal</p>
+                    <p className="text-2xl font-bold text-orange-600">{Math.round(nutrition.energy_kcal)}</p>
+                    <p className="text-xs text-gray-500">Calories</p>
                   </div>
                 )}
-                {product.proteins !== undefined && product.proteins !== null && (
+                {nutrition.proteins !== undefined && nutrition.proteins !== null && (
                   <div className="bg-red-50 rounded-lg p-3 text-center">
-                    <p className="text-2xl font-bold text-red-600">{product.proteins}g</p>
+                    <p className="text-2xl font-bold text-red-600">{Number(nutrition.proteins).toFixed(1)}g</p>
                     <p className="text-xs text-gray-500">Protein</p>
                   </div>
                 )}
-                {product.carbs !== undefined && product.carbs !== null && (
+                {nutrition.carbohydrates !== undefined && nutrition.carbohydrates !== null && (
                   <div className="bg-yellow-50 rounded-lg p-3 text-center">
-                    <p className="text-2xl font-bold text-yellow-600">{product.carbs}g</p>
+                    <p className="text-2xl font-bold text-yellow-600">{Number(nutrition.carbohydrates).toFixed(1)}g</p>
                     <p className="text-xs text-gray-500">Carbs</p>
                   </div>
                 )}
-                {product.fat !== undefined && product.fat !== null && (
+                {nutrition.fat !== undefined && nutrition.fat !== null && (
                   <div className="bg-purple-50 rounded-lg p-3 text-center">
-                    <p className="text-2xl font-bold text-purple-600">{product.fat}g</p>
+                    <p className="text-2xl font-bold text-purple-600">{Number(nutrition.fat).toFixed(1)}g</p>
                     <p className="text-xs text-gray-500">Fat</p>
                   </div>
                 )}
-                {product.fiber !== undefined && product.fiber !== null && (
+                {nutrition.fiber !== undefined && nutrition.fiber !== null && (
                   <div className="bg-green-50 rounded-lg p-3 text-center">
-                    <p className="text-2xl font-bold text-green-600">{product.fiber}g</p>
+                    <p className="text-2xl font-bold text-green-600">{Number(nutrition.fiber).toFixed(1)}g</p>
                     <p className="text-xs text-gray-500">Fiber</p>
+                  </div>
+                )}
+                {nutrition.sugars !== undefined && nutrition.sugars !== null && (
+                  <div className="bg-pink-50 rounded-lg p-3 text-center">
+                    <p className="text-2xl font-bold text-pink-600">{Number(nutrition.sugars).toFixed(1)}g</p>
+                    <p className="text-xs text-gray-500">Sugars</p>
+                  </div>
+                )}
+                {nutrition.salt !== undefined && nutrition.salt !== null && (
+                  <div className="bg-blue-50 rounded-lg p-3 text-center">
+                    <p className="text-2xl font-bold text-blue-600">{Number(nutrition.salt).toFixed(2)}g</p>
+                    <p className="text-xs text-gray-500">Salt</p>
+                  </div>
+                )}
+                {nutrition.saturated_fat !== undefined && nutrition.saturated_fat !== null && (
+                  <div className="bg-indigo-50 rounded-lg p-3 text-center">
+                    <p className="text-2xl font-bold text-indigo-600">{Number(nutrition.saturated_fat).toFixed(1)}g</p>
+                    <p className="text-xs text-gray-500">Sat. Fat</p>
                   </div>
                 )}
               </div>
             </div>
           )}
 
-          {product.nutriscore && (
+          {/* Nutri-Score */}
+          {(nutrition.nutriscore || product.nutriscore) && (
             <div className="mt-4">
               <span className="text-sm text-gray-500 mr-2">Nutri-Score:</span>
               <span className={`inline-block px-3 py-1 rounded-full text-white font-bold uppercase ${
-                product.nutriscore === 'a' ? 'bg-green-500' :
-                product.nutriscore === 'b' ? 'bg-lime-500' :
-                product.nutriscore === 'c' ? 'bg-yellow-500' :
-                product.nutriscore === 'd' ? 'bg-orange-500' : 'bg-red-500'
+                (nutrition.nutriscore || product.nutriscore) === 'a' ? 'bg-green-500' :
+                (nutrition.nutriscore || product.nutriscore) === 'b' ? 'bg-lime-500' :
+                (nutrition.nutriscore || product.nutriscore) === 'c' ? 'bg-yellow-500' :
+                (nutrition.nutriscore || product.nutriscore) === 'd' ? 'bg-orange-500' : 'bg-red-500'
               }`}>
-                {product.nutriscore}
+                {nutrition.nutriscore || product.nutriscore}
               </span>
             </div>
           )}
 
-          {product.ingredients && (
+          {/* Ingredients */}
+          {(nutrition.ingredients || product.ingredients) && (
             <div className="mt-6 pt-6 border-t">
               <h3 className="font-semibold text-gray-900 mb-2 flex items-center gap-2">
                 <Info size={18} className="text-blue-500" />
                 Ingredients
               </h3>
-              <p className="text-sm text-gray-600 leading-relaxed">{product.ingredients}</p>
+              <p className="text-sm text-gray-600 leading-relaxed">{nutrition.ingredients || product.ingredients}</p>
             </div>
           )}
         </div>
