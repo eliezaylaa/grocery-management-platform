@@ -37,7 +37,7 @@ export const Layout = () => {
     }
   };
 
-  // Navigation items based on role - Cart removed from sidebar
+  // Navigation items based on role
   const getNavItems = () => {
     const role = user?.role;
 
@@ -122,7 +122,7 @@ export const Layout = () => {
           onClick={() => navigate("/")}
           className="font-bold text-lg text-blue-600"
         >
-           Trinity
+          Trinity
         </button>
         <button
           onClick={() => navigate("/cart")}
@@ -194,7 +194,7 @@ export const Layout = () => {
               onClick={() => navigate("/")}
               className="text-xl font-bold text-blue-600 hover:text-blue-700 transition-colors"
             >
-              Trinity 
+              Trinity
             </button>
           </div>
           <nav className="flex-1 px-4 space-y-1">
@@ -216,15 +216,6 @@ export const Layout = () => {
               </NavLink>
             ))}
           </nav>
-          <div className="p-4 border-t border-gray-200">
-            <button
-              onClick={handleLogout}
-              className="flex items-center gap-3 px-4 py-3 w-full text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-            >
-              <LogOut size={20} />
-              Logout
-            </button>
-          </div>
         </aside>
 
         {/* Main Content */}
